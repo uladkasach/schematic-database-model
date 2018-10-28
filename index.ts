@@ -1,9 +1,10 @@
 import { ConvinienceSchema, StrictSchema, StrictAttributes, InvalidPropertyMap } from './types.d';
 import noramlizeSchemaAttributes from './normalizeSchemaAttributes';
 import addValidationToAttributes from './addValidationToAttributes';
+import FundementalDatabaseModel from './fundementalDatabaseModel';
 import { ValidationError } from './errors';
 
-export default class SchematicDatabaseModel {
+export default class SchematicDatabaseModel extends FundementalDatabaseModel {
   [index: string]: any; // defines that we can have any property defined dynamically
 
   protected static schema: ConvinienceSchema; // defined by implementation
@@ -13,6 +14,8 @@ export default class SchematicDatabaseModel {
     -- initialization ----------------------------------------------------------
   */
   constructor(props: any) {
+    super(); // pass no params, as FundementalDatabaseModel expects its required params to be passed to it by overwriting the function and calling the super version
+
     // validate the props
     const errors = (this.constructor as typeof SchematicDatabaseModel).validate(props);
     if (Object.keys(errors).length !== 0) {
