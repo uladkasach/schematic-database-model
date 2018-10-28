@@ -1,31 +1,43 @@
-import { ValidationError } from './errors';
+export type ValidateMethod = (value?: any) => string[];
 
-type ValidateMethod = (value?: any) => string[];
-
-interface Attribute {
+export interface Attribute {
   type: string;
   name?: string;
   required?: boolean;
   validation?: ValidateMethod;
 }
 
-interface StrictAttribute {
+export interface StrictAttribute {
   type: string;
   name: string;
   required: boolean;
   validation: ValidateMethod;
 }
 
-interface StrictAttributes {
+export interface StrictAttributes {
   [index: string]: StrictAttribute;
 }
-interface ConvinienceAttributes {
+export interface ConvinienceAttributes {
   [index: string]: Attribute | string;
 }
-interface Attributes {
+export interface Attributes {
   [index: string]: Attribute;
 }
 
-interface WellKnownTypes {
+export interface WellKnownTypes {
   [index: string]: ValidateMethod;
+}
+
+export interface ConvinienceSchema {
+  tableName: string;
+  attributes: ConvinienceAttributes;
+}
+
+export interface StrictSchema {
+  tableName: string;
+  attributes: StrictAttributes;
+}
+
+export interface InvalidPropertyMap {
+  [index: string]: string[];
 }

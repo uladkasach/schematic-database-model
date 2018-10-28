@@ -1,22 +1,29 @@
 /* tslint:disable max-classes-per-file */
-
-import { Attribute } from './types.d';
+import { Attribute, InvalidPropertyMap } from './types.d';
 
 export class ValidationError extends Error {
+  public errors: InvalidPropertyMap;
+  public props: any;
+  public modelName: string;
   constructor(
     {
-      value,
-      attribute,
       errors,
+      props,
+      modelName,
     }:
     {
-      value: any,
-      attribute: Attribute,
-      errors: string[],
+      errors: InvalidPropertyMap,
+      props: any,
+      modelName: string,
     },
   ) {
-    const message = `Value ${value} was not valid for attribute ${attribute.name}: ${errors}`;
+    const message = `Errors on ${Object.keys(errors).length} properties were found while validating properties for model ${modelName}.:
+${JSON.stringify(errors, null, 2)}`;
     super(message);
+
+    this.errors = errors;
+    this.props = props;
+    this.modelName = modelName;
   }
 }
 

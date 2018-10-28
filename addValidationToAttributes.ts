@@ -1,11 +1,9 @@
 import {
-  Attribute,
   Attributes,
   StrictAttributes,
   WellKnownTypes,
 } from './types.d';
 import {
-  ValidationError,
   AttributeTypeError,
   CustomAttributeMissingValidationError,
 } from './errors';

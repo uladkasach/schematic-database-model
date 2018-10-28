@@ -1,14 +1,56 @@
-import { Attributes, StrictAttributes } from './types.d';
+import { ConvinienceSchema, StrictSchema, StrictAttributes, InvalidPropertyMap } from './types.d';
 import noramlizeSchemaAttributes from './normalizeSchemaAttributes';
 import addValidationToAttributes from './addValidationToAttributes';
+import { ValidationError } from './errors';
 
 export default class SchematicDatabaseModel {
-  protected static schema: { tableName: string, attributes: StrictAttributes }; // defined by implementation
-  protected static parsedSchema: { tableName: string, attributes: Attributes }; // any type, since we dont know the keys in advance
+  [index: string]: any; // defines that we can have any property defined dynamically
+
+  protected static schema: ConvinienceSchema; // defined by implementation
+  protected static parsedSchema: StrictSchema; // any type, since we dont know the keys in advance
 
   /**
-    -- schema validation --------------------------------------------------------------
+    -- initialization ----------------------------------------------------------
   */
+  constructor(props: any) {
+    // validate the props
+    const errors = (this.constructor as typeof SchematicDatabaseModel).validate(props);
+    if (Object.keys(errors).length !== 0) {
+      throw new ValidationError({
+        errors,
+        props,
+        modelName: this.constructor.name,
+      });
+    }
+
+    // assign model props to self
+    const { attributes } = (this.constructor as typeof SchematicDatabaseModel).getParsedSchema();
+    const attributeKeys = Object.keys(attributes);
+    attributeKeys.forEach((key) => {
+      const value = props[key];
+      this[key] = value;
+    });
+  }
+
+  /**
+    -- schema validation ----------------------------------------------------------
+  */
+  /**
+    validate the props passed based on schema
+  */
+  public static validate(props: any) {
+    const { attributes }: { attributes: StrictAttributes } = this.getParsedSchema();
+    const attributeKeys = Object.keys(attributes);
+    const errors: InvalidPropertyMap = {}; // collect all errors
+    attributeKeys.forEach((attributeKey) => {
+      const attribute = attributes[attributeKey];
+      const value = props[attributeKey];
+      const attributeErrors = attribute.validation(value);
+      if (attributeErrors.length) errors[attributeKey] = attributeErrors;
+    });
+    return errors;
+  }
+
   /**
     convert the defined schema into a validated and actionable schema object
     - caches the schema results
@@ -31,4 +73,5 @@ export default class SchematicDatabaseModel {
     }
     return this.parsedSchema;
   }
+
 }
