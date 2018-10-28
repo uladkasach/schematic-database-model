@@ -8,7 +8,7 @@ import { Attributes, Attribute, ConvinienceAttributes } from './types.d';
     2. set default value for required
     3. append attribute name
 */
-const normalizeSchemaAttributes = (attributes: ConvinienceAttributes) => {
+const normalizeSchemaAttributes = ({ attributes }: { attributes: ConvinienceAttributes }) => {
   const normalizedAttributes: Attributes = {}; // place where we will build the normalized attributes
   const attributeKeys = Object.keys(attributes); // define the keys we want to loop over
   attributeKeys.forEach((attributeKey) => {

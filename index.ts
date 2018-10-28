@@ -1,14 +1,10 @@
-export const addValidationToSchema = ({ attributes }: { attributes: any }) => {
+import { Attributes, StrictAttributes } from './types.d';
+import noramlizeSchemaAttributes from './normalizeSchemaAttributes';
+import addValidationToAttributes from './addValidationToAttributes';
 
-};
-
-interface Schema {
-  tableName: string;
-  attributes: any;
-}
 export default class SchematicDatabaseModel {
-  protected static schema: Schema; // defined by implementation
-  protected static parsedSchema: Schema; // any type, since we dont know the keys in advance
+  protected static schema: { tableName: string, attributes: StrictAttributes }; // defined by implementation
+  protected static parsedSchema: { tableName: string, attributes: Attributes }; // any type, since we dont know the keys in advance
 
   /**
     -- schema validation --------------------------------------------------------------
@@ -21,8 +17,11 @@ export default class SchematicDatabaseModel {
     if (!this.parsedSchema) { // if parsed schema is not defined, define it for the constructor
       const { schema: { tableName, attributes } } = this; // extract form the class static properties
 
-      // attach validation methods to each field
-      const attributesWithValidation = addValidationToSchema({ attributes });
+      // 1. normalize schema attributes
+      const normalizedAttributes = noramlizeSchemaAttributes({ attributes });
+
+      // 2. attach validation methods to each field
+      const attributesWithValidation = addValidationToAttributes({ attributes: normalizedAttributes });
 
       // 3. append parsedSchema to the class, to cache these computations
       this.parsedSchema = {
