@@ -38,5 +38,8 @@ describe('FundementalDatabaseModel', () => {
         brookeses.forEach((brookes: Person) => expect(brookes.constructor).toEqual(Person));
       });
     });
+    describe('find or create', () => {
+      it('should try to find ')
+    });
   });
 });

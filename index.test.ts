@@ -5,6 +5,7 @@ import { ConvinienceSchema, StrictSchema } from './types.d';
 
 const personSchema: ConvinienceSchema = {
   tableName: 'people',
+  primaryKey: 'name',
   attributes: {
     name: {
       type: 'string',
@@ -15,13 +16,16 @@ const personSchema: ConvinienceSchema = {
 };
 
 describe('SchematicDatabaseModel', () => {
+  class Person extends SchematicDatabaseModel {
+    protected static schema = personSchema;
+    public async create() { return new Person({}); }
+    public async update() { return new Person({}); }
+    public async delete() { return true; }
+  }
   describe('static', () => {
     describe('schema and validation', () => {
       describe('getParsedSchema', () => {
         it('should be able to parse a schema', () => {
-          class Person extends SchematicDatabaseModel {
-            protected static schema = personSchema;
-          }
           const parsedSchema: StrictSchema = (Person as any).getParsedSchema(); // note - (x as any) gets around private var constraint
           expect(parsedSchema.attributes).toMatchObject({
             name: {
@@ -37,9 +41,6 @@ describe('SchematicDatabaseModel', () => {
           });
         });
         it('should cache the parsedSchema results', () => {
-          class Person extends SchematicDatabaseModel {
-            protected static schema = personSchema;
-          }
           expect((Person as any).parsedSchema).toEqual(undefined);
           (Person as any).getParsedSchema(); // note - (x as any) gets around private var constraint
           expect((Person as any).parsedSchema).not.toEqual(undefined);
@@ -47,9 +48,6 @@ describe('SchematicDatabaseModel', () => {
       });
       describe('validate', () => {
         describe('should be able to validate accurately', () => {
-          class Person extends SchematicDatabaseModel {
-            protected static schema = personSchema;
-          }
           const errorResults = [
             {
               props: {
@@ -89,9 +87,6 @@ describe('SchematicDatabaseModel', () => {
     });
   });
   describe('instantiated', () => {
-    class Person extends SchematicDatabaseModel {
-      protected static schema = personSchema;
-    }
     describe('should validate the props before initialization', () => {
       it('should throw error if props are invalid', () => {
         try {
@@ -104,7 +99,6 @@ describe('SchematicDatabaseModel', () => {
       it('should validate successfuly for accurate props', () => {
         new Person({ name: 'casey' }); // tslint:disable-line
       });
-
     });
   });
 });

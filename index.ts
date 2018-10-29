@@ -4,7 +4,7 @@ import addValidationToAttributes from './addValidationToAttributes';
 import FundementalDatabaseModel from './fundementalDatabaseModel';
 import { ValidationError } from './errors';
 
-export default class SchematicDatabaseModel extends FundementalDatabaseModel {
+export default abstract class SchematicDatabaseModel extends FundementalDatabaseModel {
   [index: string]: any; // defines that we can have any property defined dynamically
 
   protected static schema: ConvinienceSchema; // defined by implementation
@@ -60,7 +60,7 @@ export default class SchematicDatabaseModel extends FundementalDatabaseModel {
   */
   protected static getParsedSchema() {
     if (!this.parsedSchema) { // if parsed schema is not defined, define it for the constructor
-      const { schema: { tableName, attributes } } = this; // extract form the class static properties
+      const { schema: { tableName, attributes, primaryKey } } = this; // extract form the class static properties
 
       // 1. normalize schema attributes
       const normalizedAttributes = noramlizeSchemaAttributes({ attributes });
@@ -71,10 +71,38 @@ export default class SchematicDatabaseModel extends FundementalDatabaseModel {
       // 3. append parsedSchema to the class, to cache these computations
       this.parsedSchema = {
         tableName,
+        primaryKey,
         attributes: attributesWithValidation,
       };
     }
     return this.parsedSchema;
   }
 
+  /**
+    -- Database Convinience Methods -------------------------------------------------------
+  */
+  get primaryKeyValue(): any {
+    const primaryKey = (this.constructor as typeof SchematicDatabaseModel).schema.primaryKey;
+    const primaryKeyValue = (this as SchematicDatabaseModel)[primaryKey]; // we expect
+    return primaryKeyValue;
+  }
+
+  /**
+    define that create, update, and delete must all be custom implemented
+  */
+  public abstract create(): Promise<extends SchematicDatabaseModel>;
+  public abstract update(): Promise<SchematicDatabaseModel>;
+  public abstract delete(): Promise<boolean>;
+
+  /**
+    save
+    - creates if primaryKeyValue is set, updates if not
+    @param primaryKeyValue - since the FundementalDatabaseModel knows nothing about schema
+  */
+  public save() {
+    const method = (this.primaryKeyValue)
+      ? this.update
+      : this.save;
+    method();
+  }
 }

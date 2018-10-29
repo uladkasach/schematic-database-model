@@ -19,18 +19,12 @@ interface StaticCRUDArguments {
 */
 type CreateDatabaseConnectionMethod = () => { execute: (sql: string, values: any[]) => Promise<any> };
 abstract class FundementalDatabaseModel {
-  protected static createDatabaseConnection: CreateDatabaseConnectionMethod; // expects classes to be defined with a createDatabaseConnection as a private property
+  protected static createDatabaseConnection: CreateDatabaseConnectionMethod; // expects to be defined in implementation
+  // protected static createSemaphore: Semaphore; // exectes to be defined in implementation
 
   /**
     -- Convinience CRUD ----------------------------------------------------------
   */
-  /**
-    save
-    - creates if id is set, updates if not
-  */
-  public save() {
-    const method = (this.primaryKeyColumn)
-  }
 
   /**
     findOrCreate

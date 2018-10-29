@@ -30,11 +30,13 @@ export interface WellKnownTypes {
 
 export interface ConvinienceSchema {
   tableName: string;
+  primaryKey: string;
   attributes: ConvinienceAttributes;
 }
 
 export interface StrictSchema {
   tableName: string;
+  primaryKey: string;
   attributes: StrictAttributes;
 }
 
