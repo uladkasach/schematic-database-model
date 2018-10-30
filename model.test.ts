@@ -1,6 +1,6 @@
 /* tslint:disable max-classes-per-file */
 
-import SchematicDatabaseModel from './index';
+import SchematicDatabaseModel from './model';
 import { ConvinienceAttributes, StrictAttributes } from './types.d';
 
 const mockExecute = jest.fn().mockImplementation(() => []);

@@ -53,3 +53,5 @@ export interface DatabaseValues {
   primary_key_value: any;
   [index: string]: any;
 }
+
+export type CreateDatabaseConnectionMethod = () => Promise<{ execute: (sql: string, values: any[]) => Promise<any>, end: () => Promise<any> }>;

@@ -1,10 +1,9 @@
 import yesql from 'yesql';
 import uuidv4 from 'uuid/v4';
-import { DatabaseValues } from './types.d';
+import { DatabaseValues, CreateDatabaseConnectionMethod } from './types.d';
 
 const named = yesql.mysql; // to be used as named(querybase)(params)
 
-type CreateDatabaseConnectionMethod = () => { execute: (sql: string, values: any[]) => Promise<any>, end: () => Promise<any> };
 abstract class FundementalDatabaseModel {
   /**
     -- To Be Defined In Implementatino -----------------------------------------------------------
