@@ -1,43 +1,35 @@
 import yesql from 'yesql';
+import uuidv4 from 'uuid/v4';
+import { DatabaseValues } from './types.d';
 
 const named = yesql.mysql; // to be used as named(querybase)(params)
 
-interface StaticCRUDArguments {
-  querybase: string;
-  values: any;
-}
-
-/**
-  note, the fundemental model expects almost all methods to be overwritten so that the sql can be defined in the subclasses
-  e.g.,
-  ChildClass extends FundementalDatabaseModel {
-    create() {
-      const querybase = `INSERT ... INTO ...`;
-      return super.create(querybase);
-    }
-  }
-*/
-type CreateDatabaseConnectionMethod = () => { execute: (sql: string, values: any[]) => Promise<any> };
+type CreateDatabaseConnectionMethod = () => { execute: (sql: string, values: any[]) => Promise<any>, end: () => Promise<any> };
 abstract class FundementalDatabaseModel {
+  /**
+    -- To Be Defined In Implementatino -----------------------------------------------------------
+  */
   protected static createDatabaseConnection: CreateDatabaseConnectionMethod; // expects to be defined in implementation
+  protected static tableName: string; // expects to be defined in implementation
+  protected static primaryKey: string; // expects to be defined in implementation
   // protected static createSemaphore: Semaphore; // exectes to be defined in implementation
 
   /**
-    -- Convinience CRUD ----------------------------------------------------------
+    -- Data Extraction -----------------------------------------------------------
   */
+  protected abstract get primaryKeyValue(): any;
+  protected abstract get databaseValues(): DatabaseValues;
 
   /**
-    findOrCreate
-    - sees if one exists, if not creates.
-    - use semaphore to ensure creation and findOrCreate happen exclusively (e.g., cant findOrCreate untill create is completed)
-    @returns { object, bool_created }
+    -- Static Queries -----------------------------------------------------------
   */
-  public static async findOrCreate({ querybase, values }: StaticCRUDArguments) {
-    const results = await this.findAll({ querybase, values });
-    if (results.length) return results[0]; // return found result, best match
-    const instance = new (this as any)(values);
-    await instance.save();
-    return instance;
+  /**
+    findAll (e.g., read)
+  */
+  protected static async findAll({ querybase, values }: { querybase: string, values: any }) {
+    const results = await this.execute({ querybase, values });
+    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    return instances;
   }
 
   /**
@@ -46,37 +38,58 @@ abstract class FundementalDatabaseModel {
   /**
     create new object
     - checks if object id is defined on object already
-    - use semaphore to ensure creation and findOrCreate happen exclusively (e.g., cant create untill findOrcreate is completed)
+    - use semaphore to ensure creation and findOrCreate happen exclusively (e.g., cant create untill findOrCreate is completed)
   */
-  public create(querybase: string) {
+  protected static CREATE_QUERY: string; // user must define update query, knowing data contract availible
+  public async create(): Promise<string> {
+    const values = this.databaseValues;
 
+    // validate request
+    if (!(this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY) throw new Error('CREATE_QUERY must be defined');
+    if (values.primary_key_value) throw new Error('primary key value is already defined');
+
+    // add primary key value (uuid)
+    const uuid = uuidv4();
+    values.primary_key_value = uuid;
+
+    // get request
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    if (!result) throw new Error('unexpected result error');
+
+    // return the uuid
+    return uuid; // return the uuid
   }
 
   /**
     update object
+    - use semaphore to ensure update and findOrCreate happen exlucively (e.g., cant update untill findOrCreate is completed)
   */
-  public update(querybase: string) {
-
+  protected static UPDATE_QUERY: string; // user must define update query, knowing data contract availible
+  public async update(): Promise<string> {
+    const values = this.databaseValues;
+    if (!(this.constructor as typeof FundementalDatabaseModel).UPDATE_QUERY) throw new Error('UPDATE_QUERY must be defined');
+    if (!values.primary_key_value) throw new Error('primary key value must be defined in order to update');
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).UPDATE_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    if (!result) throw new Error('unexpected result error');
+    return values.primary_key_value; // return id of this object
   }
 
   /**
     delete (by id)
   */
-  public delete(querybase: string) {
-
+  protected static DELETE_QUERY: string = 'DELETE FROM :table_name WHERE :primary_key=:primary_key_value;';
+  public async delete(): Promise<boolean> {
+    const values = this.databaseValues;
+    if (!values.primary_key_value) throw new Error('primary key value must be defined in order to delete');
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).DELETE_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    return (result === true);
   }
 
   /**
-    findAll (e.g., read)
-  */
-  public static async findAll({ querybase, values }: StaticCRUDArguments) {
-    const results = await this.execute({ querybase, values });
-    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
-    return instances;
-  }
-
-  /**
-    -- Execution ----------------------------------------------------------
+    -- Query Execution ----------------------------------------------------------
   */
   /**
     execute
@@ -84,12 +97,31 @@ abstract class FundementalDatabaseModel {
     - creates database connection each time; TODO - reuse connections
   */
   public static async execute({ querybase, values }: { querybase: string, values?: any }) {
+    // 0.1. replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
+    const cleanedQuerybase = querybase.replace(':table_name', this.tableName); // if present we should replace it
+
+    // 0.2. add primary_key to values
+    const valuesWithPk = Object.assign({}, values, { primary_key: this.primaryKey });
+
     // 1. create { query, values } pair
-    const query = named(querybase)(values);
+    const query = named(cleanedQuerybase)(valuesWithPk);
 
     // 2. call databaseConnection.execute with query
     const databaseConnection = await this.createDatabaseConnection(); // as any, since the createDatabaseConnection will be implemented in class extension
-    const result = await databaseConnection.execute(query.sql, query.values);
+    let result;
+    let foundError;
+    try {
+      result = await databaseConnection.execute(query.sql, query.values);
+    } catch (error) {
+      console.log(error);
+      console.log(query);
+      foundError = error;
+    } finally {
+      await databaseConnection.end();
+    }
+
+    // 2.5 if error was found, continue throwing it now that we've closed db connection
+    if (foundError) throw foundError;
 
     // 3. return the result
     return result;

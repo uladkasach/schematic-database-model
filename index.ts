@@ -1,4 +1,4 @@
-import { ConvinienceSchema, StrictSchema, StrictAttributes, InvalidPropertyMap } from './types.d';
+import { StrictAttributes, ConvinienceAttributes, InvalidPropertyMap, DatabaseValues } from './types.d';
 import noramlizeSchemaAttributes from './normalizeSchemaAttributes';
 import addValidationToAttributes from './addValidationToAttributes';
 import FundementalDatabaseModel from './fundementalDatabaseModel';
@@ -7,8 +7,13 @@ import { ValidationError } from './errors';
 export default abstract class SchematicDatabaseModel extends FundementalDatabaseModel {
   [index: string]: any; // defines that we can have any property defined dynamically
 
-  protected static schema: ConvinienceSchema; // defined by implementation
-  protected static parsedSchema: StrictSchema; // any type, since we dont know the keys in advance
+  // defined by user
+  protected static tableName: string;
+  protected static primaryKey: string;
+  protected static attributes: ConvinienceAttributes;
+
+  // defined by getParsedAttributes
+  protected static parsedAttributes: StrictAttributes;
 
   /**
     -- initialization ----------------------------------------------------------
@@ -27,7 +32,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     }
 
     // assign model props to self
-    const { attributes } = (this.constructor as typeof SchematicDatabaseModel).getParsedSchema();
+    const attributes = (this.constructor as typeof SchematicDatabaseModel).getParsedAttributes();
     const attributeKeys = Object.keys(attributes);
     attributeKeys.forEach((key) => {
       const value = props[key];
@@ -42,7 +47,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     validate the props passed based on schema
   */
   public static validate(props: any) {
-    const { attributes }: { attributes: StrictAttributes } = this.getParsedSchema();
+    const attributes: StrictAttributes = this.getParsedAttributes();
     const attributeKeys = Object.keys(attributes);
     const errors: InvalidPropertyMap = {}; // collect all errors
     attributeKeys.forEach((attributeKey) => {
@@ -58,9 +63,9 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     convert the defined schema into a validated and actionable schema object
     - caches the schema results
   */
-  protected static getParsedSchema() {
-    if (!this.parsedSchema) { // if parsed schema is not defined, define it for the constructor
-      const { schema: { tableName, attributes, primaryKey } } = this; // extract form the class static properties
+  protected static getParsedAttributes() {
+    if (!this.parsedAttributes) { // if parsed schema is not defined, define it for the constructor
+      const { attributes } = this; // extract form the class static properties
 
       // 1. normalize schema attributes
       const normalizedAttributes = noramlizeSchemaAttributes({ attributes });
@@ -69,40 +74,54 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
       const attributesWithValidation = addValidationToAttributes({ attributes: normalizedAttributes });
 
       // 3. append parsedSchema to the class, to cache these computations
-      this.parsedSchema = {
-        tableName,
-        primaryKey,
-        attributes: attributesWithValidation,
-      };
+      this.parsedAttributes = attributesWithValidation;
     }
-    return this.parsedSchema;
+    return this.parsedAttributes;
   }
 
   /**
-    -- Database Convinience Methods -------------------------------------------------------
+    -- Convinience CRUD  -------------------------------------------------------
+  */
+  /**
+    save
+    - creates if primaryKeyValue is set, updates if not
+  */
+  public async save(): Promise<string> {
+    return (this.primaryKeyValue)
+      ? await this.update()
+      : await this.create();
+  }
+
+  /**
+    -- CRUD Implementation -------------------------------------------------------
+  */
+  public async create(): Promise<string> {
+    const uuid = await super.create();
+    this[(this.constructor as typeof SchematicDatabaseModel).primaryKey] = uuid; // update the primaryKey to the new uuid
+    return uuid;
+  }
+
+  /**
+    -- data extraction ----------------------------------------------------------
   */
   get primaryKeyValue(): any {
-    const primaryKey = (this.constructor as typeof SchematicDatabaseModel).schema.primaryKey;
+    const primaryKey = (this.constructor as typeof SchematicDatabaseModel).primaryKey;
     const primaryKeyValue = (this as SchematicDatabaseModel)[primaryKey]; // we expect
     return primaryKeyValue;
   }
 
-  /**
-    define that create, update, and delete must all be custom implemented
-  */
-  public abstract create(): Promise<extends SchematicDatabaseModel>;
-  public abstract update(): Promise<SchematicDatabaseModel>;
-  public abstract delete(): Promise<boolean>;
-
-  /**
-    save
-    - creates if primaryKeyValue is set, updates if not
-    @param primaryKeyValue - since the FundementalDatabaseModel knows nothing about schema
-  */
-  public save() {
-    const method = (this.primaryKeyValue)
-      ? this.update
-      : this.save;
-    method();
+  get databaseValues(): DatabaseValues {
+    const databaseValues: any = {
+      primary_key_value: this.primaryKeyValue,
+    };
+    const attributes = (this.constructor as typeof SchematicDatabaseModel).getParsedAttributes();
+    const attributeKeys = Object.keys(attributes);
+    attributeKeys.forEach((key) => {
+      const value = this[key];
+      const recordedValue = (typeof value === 'undefined') ? value : null; // if undefined, cast to null - since databases only have null
+      databaseValues[key] = recordedValue;
+    });
+    return databaseValues;
   }
+
 }

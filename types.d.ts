@@ -43,3 +43,13 @@ export interface StrictSchema {
 export interface InvalidPropertyMap {
   [index: string]: string[];
 }
+
+export interface StaticCRUDArguments {
+  querybase: string;
+  values: any;
+}
+
+export interface DatabaseValues {
+  primary_key_value: any;
+  [index: string]: any;
+}

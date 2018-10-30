@@ -1,33 +1,51 @@
 /* tslint:disable max-classes-per-file */
 
 import SchematicDatabaseModel from './index';
-import { ConvinienceSchema, StrictSchema } from './types.d';
+import { ConvinienceAttributes, StrictAttributes } from './types.d';
 
-const personSchema: ConvinienceSchema = {
-  tableName: 'people',
-  primaryKey: 'name',
-  attributes: {
-    name: {
-      type: 'string',
-      required: true,
-    },
-    middleName: 'string',
+const mockExecute = jest.fn().mockImplementation(() => []);
+const mockEnd = jest.fn();
+const createDatabaseConnectionMock = () => ({
+  execute: mockExecute,
+  end: mockEnd,
+});
+
+const personAttributes: ConvinienceAttributes = {
+  person_id: 'string',
+  name: {
+    type: 'string',
+    required: true,
   },
+  middleName: 'string',
 };
 
+beforeEach(() => {
+  mockExecute.mockClear();
+  mockEnd.mockClear();
+});
 describe('SchematicDatabaseModel', () => {
   class Person extends SchematicDatabaseModel {
-    protected static schema = personSchema;
-    public async create() { return new Person({}); }
-    public async update() { return new Person({}); }
-    public async delete() { return true; }
+    protected static createDatabaseConnection = createDatabaseConnectionMock;
+    protected static tableName = 'people';
+    protected static primaryKey = 'person_id';
+    protected static attributes = personAttributes;
+    protected static CREATE_QUERY = 'INSERT ...';
+    protected static UPDATE_QUERY = 'UPDATE ...';
+  }
+  class Person2 extends SchematicDatabaseModel {
+    protected static createDatabaseConnection = createDatabaseConnectionMock;
+    protected static tableName = 'people';
+    protected static primaryKey = 'person_id';
+    protected static attributes = personAttributes;
+    protected static CREATE_QUERY = 'INSERT ...';
+    protected static UPDATE_QUERY = 'UPDATE ...';
   }
   describe('static', () => {
     describe('schema and validation', () => {
-      describe('getParsedSchema', () => {
+      describe('getParsedAttributes', () => {
         it('should be able to parse a schema', () => {
-          const parsedSchema: StrictSchema = (Person as any).getParsedSchema(); // note - (x as any) gets around private var constraint
-          expect(parsedSchema.attributes).toMatchObject({
+          const parsedAttributes: StrictAttributes = (Person as any).getParsedAttributes(); // note - (x as any) gets around private var constraint
+          expect(parsedAttributes).toMatchObject({
             name: {
               name: 'name',
               type: 'string',
@@ -41,9 +59,9 @@ describe('SchematicDatabaseModel', () => {
           });
         });
         it('should cache the parsedSchema results', () => {
-          expect((Person as any).parsedSchema).toEqual(undefined);
-          (Person as any).getParsedSchema(); // note - (x as any) gets around private var constraint
-          expect((Person as any).parsedSchema).not.toEqual(undefined);
+          expect((Person2 as any).parsedAttributes).toEqual(undefined);
+          (Person2 as any).getParsedAttributes(); // note - (x as any) gets around private var constraint
+          expect((Person2 as any).parsedAttributes).not.toEqual(undefined);
         });
       });
       describe('validate', () => {
@@ -98,6 +116,34 @@ describe('SchematicDatabaseModel', () => {
       });
       it('should validate successfuly for accurate props', () => {
         new Person({ name: 'casey' }); // tslint:disable-line
+      });
+    });
+  });
+  describe('database access', () => {
+    describe('create', () => {
+      it('should be able to update id after creating', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ name: 'bessy' });
+        expect(typeof person.person_id).toEqual('undefined');
+        await person.create();
+        expect(typeof person.person_id).toEqual('string');
+      });
+    });
+    describe('save', () => {
+      it('should save if no id is defined', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ name: 'bessy' });
+        expect(typeof person.person_id).toEqual('undefined');
+        await person.save();
+        expect(typeof person.person_id).toEqual('string');
+        expect(mockExecute.mock.calls[0][0]).toEqual('INSERT ...');
+      });
+      it('should update if id is defined', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ person_id: '12', name: 'bessy' });
+        expect(typeof person.person_id).toEqual('string');
+        await person.save();
+        expect(mockExecute.mock.calls[0][0]).toEqual('UPDATE ...');
       });
     });
   });
