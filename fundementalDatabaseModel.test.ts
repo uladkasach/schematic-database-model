@@ -1,5 +1,6 @@
 /* tslint:disable max-classes-per-file */
 import FundementalDatabaseModel from './fundementalDatabaseModel';
+import { CreateDatabaseConnectionMethod } from './types.d';
 
 const mockExecute = jest.fn().mockImplementation(() => []);
 const mockEnd = jest.fn();
@@ -14,7 +15,7 @@ beforeEach(() => {
 });
 describe('FundementalDatabaseModel', () => {
   class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
-    protected static createDatabaseConnection = createDatabaseConnectionMock;
+    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as CreateDatabaseConnectionMethod);
     protected static tableName = 'test_table';
     protected static primaryKey = 'pk';
     protected get primaryKeyValue() { return 'pk_val'; }
@@ -69,12 +70,20 @@ describe('FundementalDatabaseModel', () => {
   describe('static crud', () => {
     describe('find all', () => {
       it('should be able to find and instantiate classes', async () => {
-        mockExecute.mockResolvedValueOnce([{ name: 'casey' }, { name: 'fred' }]);
+        mockExecute.mockResolvedValueOnce([[{ name: 'casey' }, { name: 'fred' }]]);
         const brookeses = await Person.findAllTest();
         expect(brookeses.length).toEqual(2);
         expect(brookeses[0].name).toEqual('casey');
         expect(brookeses[1].name).toEqual('fred');
         brookeses.forEach((brookes: Person) => expect(brookes.constructor).toEqual(Person));
+      });
+    });
+    describe('find by id', () => {
+      it('should be able to find and instantiate a class', async () => {
+        mockExecute.mockResolvedValueOnce([[{ name: 'casey' }]]);
+        const brookes = await Person.findById(12);
+        expect(brookes.name).toEqual('casey');
+        expect(brookes.constructor).toEqual(Person);
       });
     });
   });
@@ -101,7 +110,7 @@ describe('FundementalDatabaseModel', () => {
         const person = new Person({ pk: '12', name: 'bessy' });
         await person.delete();
         expect(mockExecute.mock.calls.length).toEqual(1);
-        expect(mockExecute.mock.calls[0]).toMatchObject(['DELETE FROM test_table WHERE ?=?;', ['pk', '12']]);
+        expect(mockExecute.mock.calls[0]).toMatchObject(['DELETE FROM test_table WHERE pk=?;', ['12']]);
       });
       it('should throw error if pk not defined', async () => {
         const person = new Person({ name: 'bessy' });

@@ -26,9 +26,24 @@ abstract class FundementalDatabaseModel {
     findAll (e.g., read)
   */
   protected static async findAll({ querybase, values }: { querybase: string, values: any }) {
-    const results = await this.execute({ querybase, values });
+    const [results] = await this.execute({ querybase, values });
     const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
     return instances;
+  }
+
+  /**
+    findById (e.g., read)
+  */
+  protected static FIND_BY_ID_QUERY: string = 'SELECT * FROM :table_name WHERE :primary_key=:id;';
+  public static async findById(id: string | number) {
+    const querybase = this.FIND_BY_ID_QUERY;
+    const values = {
+      id,
+    };
+    const [results] = await this.execute({ querybase, values });
+    if (!results[0]) return null;
+    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    return instances[0];
   }
 
   /**
@@ -96,14 +111,13 @@ abstract class FundementalDatabaseModel {
     - creates database connection each time; TODO - reuse connections
   */
   public static async execute({ querybase, values }: { querybase: string, values?: any }) {
-    // 0.1. replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
-    const cleanedQuerybase = querybase.replace(':table_name', this.tableName); // if present we should replace it
-
-    // 0.2. add primary_key to values
-    const valuesWithPk = Object.assign({}, values, { primary_key: this.primaryKey });
+    // 0.1.
+    const cleanedQuerybase = querybase
+      .replace(':table_name', this.tableName) // replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
+      .replace(':primary_key', this.primaryKey); // replace :primary_key with table_name value in string, since MySQL can not support parameteriazed table names
 
     // 1. create { query, values } pair
-    const query = named(cleanedQuerybase)(valuesWithPk);
+    const query = named(cleanedQuerybase)(values);
 
     // 2. call databaseConnection.execute with query
     const databaseConnection = await this.createDatabaseConnection(); // as any, since the createDatabaseConnection will be implemented in class extension

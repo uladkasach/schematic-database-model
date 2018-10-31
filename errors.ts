@@ -18,6 +18,7 @@ export class ValidationError extends Error {
     },
   ) {
     const message = `Errors on ${Object.keys(errors).length} properties were found while validating properties for model ${modelName}.:
+${JSON.stringify(props, null, 2)}
 ${JSON.stringify(errors, null, 2)}`;
     super(message);
 

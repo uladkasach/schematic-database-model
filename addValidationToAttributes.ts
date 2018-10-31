@@ -30,6 +30,11 @@ const wellKnownTypes: WellKnownTypes = {
     if (typeof value !== 'boolean') errors.push('must be a boolean');
     return errors;
   },
+  datetime: (value) => {
+    const errors = [];
+    if (isNaN(Date.parse(value))) errors.push('must be a parsable date string');
+    return errors;
+  },
 };
 
 /**
@@ -59,8 +64,9 @@ const addValidationToAttributes = ({ attributes }: { attributes: Attributes }) =
       const errors: string[] = [];
 
       // 0. check that it is present if required
-      if (attribute.required && typeof value === 'undefined') errors.push('element is required, but not defined');
-      if (typeof value === 'undefined') return errors; // no need to evaluate further if not defined; either required error was thrown or no errors exist
+      const nullValue = typeof value === 'undefined' || value === null;
+      if (attribute.required && nullValue) errors.push('element is required, but not defined');
+      if (nullValue) return errors; // no need to evaluate further if not defined; either required error was thrown or no errors exist
 
       // 1. if type is well known, check that it passes validation
       if (isWellKnownType) {

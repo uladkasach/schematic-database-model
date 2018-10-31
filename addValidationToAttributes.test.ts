@@ -45,7 +45,7 @@ describe('addValidationToAttributes', () => {
           attributes: {
             test: {
               type: 'custom',
-              validation: value => [],
+              validation: () => [],
             },
           },
         });
@@ -106,6 +106,19 @@ describe('addValidationToAttributes', () => {
         expect(validation(12.3)).not.toHaveLength(0);
         expect(validation('test')).not.toHaveLength(0);
       });
+      it('should validate datetime type accurately', () => {
+        const { test: { validation } } = addValidationToAttributes({
+          attributes: {
+            test: {
+              type: 'datetime',
+            },
+          },
+        });
+        expect(validation(12345)).toHaveLength(0); // dates may be defined as numbers
+        expect(validation('2018-10-11')).toHaveLength(0);
+        expect(validation(true)).not.toHaveLength(0);
+        expect(validation('test')).not.toHaveLength(0);
+      });
     });
     describe('required', () => {
       it('should validate not required, undefined value, accurately', () => {
@@ -119,6 +132,7 @@ describe('addValidationToAttributes', () => {
         });
         expect(validation('test')).toHaveLength(0);
         expect(validation()).toHaveLength(0);
+        expect(validation(null)).toHaveLength(0);
       });
       it('should validate required, undefined value, accurately', () => {
         const { test: { validation } } = addValidationToAttributes({
