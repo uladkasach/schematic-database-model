@@ -119,6 +119,17 @@ describe('SchematicDatabaseModel', () => {
       });
     });
   });
+  describe('data retreival getters', () => {
+    describe('databaseValues', () => {
+      it('should return valid data from props', () => {
+        const person = new Person({ name: 'casey' });
+        expect(person.name).toEqual('casey');
+        expect(person.databaseValues).toMatchObject({
+          name: 'casey',
+        });
+      });
+    });
+  });
   describe('database access', () => {
     describe('create', () => {
       it('should be able to update id after creating', async () => {

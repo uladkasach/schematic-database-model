@@ -118,7 +118,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     const attributeKeys = Object.keys(attributes);
     attributeKeys.forEach((key) => {
       const value = this[key];
-      const recordedValue = (typeof value === 'undefined') ? value : null; // if undefined, cast to null - since databases only have null
+      const recordedValue = (typeof value === 'undefined') ? null : value; // if undefined, cast to null - since databases only have null
       databaseValues[key] = recordedValue;
     });
     return databaseValues;
