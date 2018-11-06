@@ -6,7 +6,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "clean": "rm -rf ./dist",
-    "build": "npm run clean && npm run build-ts",
+    "build": "npm run clean && npm run build-ts && npm run copy-explicit-typedefs",
+    "copy-explicit-typedefs": "cp src/*.d.ts dist",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc -p ./tsconfig.build.json",
