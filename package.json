@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "description": "Utilize ORM-like schema validation and abstract away general model queries, while having full control over the SQL",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "build": "npm run build-ts",
+    "clean": "rm -rf ./dist",
+    "build": "npm run clean && npm run build-ts",
     "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc -p ./tsconfig.build.json",
