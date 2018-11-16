@@ -94,6 +94,7 @@ abstract class FundementalDatabaseModel {
   protected static FIND_OR_CREATE_QUERY: string; // user must define FIND query, knowing data contract availible
   public async findOrCreate(): Promise<string> {
     const values = this.databaseValues;
+    if (!values.primary_key_value) values.primary_key_value = uuidv4(); // if not already provided, provide it
     if (!(this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY) throw new Error('FIND_OR_CREATE_QUERY must be defined');
     const querybase = (this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY;
     const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });

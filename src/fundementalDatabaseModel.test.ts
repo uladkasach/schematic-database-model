@@ -21,10 +21,17 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static FIND_OR_CREATE_QUERY = 'SELECT... IF... THEN...';
+    protected static FIND_OR_CREATE_QUERY = `
+    INSERT INTO :table_name (:primary_key, name) -- insert
+    SELECT * FROM (SELECT :primary_key_value, :name) -- the following values
+    WHERE NOT EXISTS ( -- if we cant find the following row
+        SELECT * FROM :table_name WHERE name=:name -- i.e., FIND_QUERY
+    ) LIMIT 1;
+    `;
     protected get databaseValues() {
       return {
         primary_key_value: this.pk,
+        name: this.name,
       };
     }
     public static findAllTest() {
@@ -140,11 +147,17 @@ describe('FundementalDatabaseModel', () => {
       });
     });
     describe('findOrCreate', () => {
-      it('should be able to findOrCreate', async () => {
+      it.only('should be able to findOrCreate', async () => {
         mockExecute.mockResolvedValueOnce(true);
-        const person = new Person({ pk: '12', name: 'bessy' });
+        const person = new Person({ name: 'bessy' });
         const id = await person.findOrCreate();
         expect(typeof id).toEqual('string');
+        expect(mockExecute.mock.calls[0][0].trim()).toEqual(`INSERT INTO test_table (pk, name) -- insert
+    SELECT * FROM (SELECT ?, ?) -- the following values
+    WHERE NOT EXISTS ( -- if we cant find the following row
+        SELECT * FROM test_table WHERE name=? -- i.e., FIND_QUERY
+    ) LIMIT 1;`);
+        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key should be set, even if we didnt give one
       });
     });
     describe('delete', () => {
