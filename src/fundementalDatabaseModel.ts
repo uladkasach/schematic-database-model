@@ -128,8 +128,19 @@ abstract class FundementalDatabaseModel {
       .replace(/:table_name/g, this.tableName) // replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
       .replace(/:primary_key(?!_)/g, this.primaryKey); // replace :primary_key (but not :primary_key_value's :primary_key) with table_name value in string, since MySQL can not support parameteriazed table names
 
+    // 0.2 replace all parameters user asked to explicitly insert into statement, not as prepared statement parameters
+    let specifiedQueryBase = cleanedQuerybase;
+    const parameters = Object.keys(values);
+    parameters.forEach((parameter) => { // for each parameter, check if it was requested in its "constant" form
+      const value = values[parameter];
+      const pattern = `x:${parameter}(?!_)`; // any string that starts with x:${parameterName} and does not continue with a _
+      const regex = new RegExp(pattern, 'g');
+      const stringRepresentationOfValue = (typeof value === 'number') ? `${value}` : `'${value}'`; // TODO - find cases where this breaks
+      specifiedQueryBase = specifiedQueryBase.replace(regex, stringRepresentationOfValue);
+    });
+
     // 1. create { query, values } pair
-    const query = named(cleanedQuerybase)(values);
+    const query = named(specifiedQueryBase)(values);
 
     // 2. call databaseConnection.execute with query
     const databaseConnection = await this.createDatabaseConnection(); // as any, since the createDatabaseConnection will be implemented in class extension

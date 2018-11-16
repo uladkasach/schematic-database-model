@@ -52,6 +52,15 @@ describe('FundementalDatabaseModel', () => {
       expect(result).toEqual(['hello']);
       expect(mockExecute.mock.calls.length).toEqual(1);
     });
+    describe('specifying constants', () => {
+      it('should be possible to specify that a parameter is to be treated as a constant', async () => {
+        mockExecute.mockResolvedValueOnce(['hello']);
+        const result = await Person.execute({ querybase: 'SELECT x:name', values : { name: 'casey' } });
+        expect(result).toEqual(['hello']);
+        expect(mockExecute.mock.calls.length).toEqual(1);
+        expect(mockExecute.mock.calls[0][0]).toEqual("SELECT 'casey'");
+      });
+    });
     describe('reserved namespace', () => {
       describe(':table_name', () => {
         it('should replace all :table_name with table_name value - one occurance', async () => {
@@ -147,7 +156,7 @@ describe('FundementalDatabaseModel', () => {
       });
     });
     describe('findOrCreate', () => {
-      it.only('should be able to findOrCreate', async () => {
+      it('should be able to findOrCreate', async () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ name: 'bessy' });
         const id = await person.findOrCreate();

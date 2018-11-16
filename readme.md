@@ -12,6 +12,13 @@ The purpose of the schematic database model is to:
 
 Ultimately through these abstractions the developer is able to focus on the actual business logic and not on the repetitive tasks of interacting with the database. Further, the developer is confident that the contract between their programs and the database is well defined (i.e., schema validation).
 
+# SQL Parsing
+This library uses yesql for parsing your sql statements into prepared statements. This means that we bind parameters from the object to the sql by column name in the following form `:column_name`. If you wish to make the value in the statement constant, and not a prepared statement variable, instead define the column name in the following form `x:column_name`.
+
+For example:
+- `SELECT * FROM a_table WHERE a_column=:a_column_value` -> `SELECT * FROM a_table WHERE a_column=?`
+- `SELECT x:a_column_value` -> `SELECT '__some_constant__'`
+
 # Examples
 
 ## Basic model
@@ -189,16 +196,16 @@ Use `INSERT ... ON DUPLICATE KEY`
 #### When no unique constraints are usable:
 ```sql
 INSERT INTO canonical_images (canonical_image_id) -- insert
-SELECT * FROM (SELECT '21') AS insert_values_temporary_table -- the following values
+SELECT * FROM (SELECT '21' ) AS insert_values_temporary_table -- the following values
 WHERE NOT EXISTS (
     SELECT * FROM canonical_images WHERE canonical_image_id = '21' -- if we cant find this row
 ) LIMIT 1;
 ```
 or more generally
 ```sql
-INSERT INTO :table_name (YOUR COLUMNS) -- insert
-SELECT * FROM (SELECT YOUR VALUES) -- the following values
+INSERT INTO :table_name (:primary_key, __YOUR_COLUMNS__) -- insert
+SELECT * FROM (SELECT x:primary_key_value, __YOUR_OTHER_VALUES_AS_CONSTANTS__) AS insert_values_temporary_table -- the following values
 WHERE NOT EXISTS ( -- if we cant find the following row
-    SELECT * FROM :table_name WHERE YOUR_COLUMNS -- i.e., FIND_QUERY
+    SELECT * FROM :table_name WHERE __YOUR_COLUMNS__ -- i.e., FIND_QUERY
 ) LIMIT 1;
 ```
