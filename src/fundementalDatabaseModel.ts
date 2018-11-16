@@ -121,11 +121,11 @@ abstract class FundementalDatabaseModel {
     - expects database connection creation method to have been defined as a static property of the class
     - creates database connection each time; TODO - reuse connections
   */
-  public static async execute({ querybase, values }: { querybase: string, values?: any }) {
+  public static async execute({ querybase, values = {} }: { querybase: string, values?: any }) {
     // 0.1.
     const cleanedQuerybase = querybase
-      .replace(':table_name', this.tableName) // replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
-      .replace(':primary_key', this.primaryKey); // replace :primary_key with table_name value in string, since MySQL can not support parameteriazed table names
+      .replace(/:table_name/g, this.tableName) // replace :table_name with table_name value in string, since MySQL can not support parameteriazed table names
+      .replace(/:primary_key(?!_)/g, this.primaryKey); // replace :primary_key (but not :primary_key_value's :primary_key) with table_name value in string, since MySQL can not support parameteriazed table names
 
     // 1. create { query, values } pair
     const query = named(cleanedQuerybase)(values);

@@ -45,12 +45,46 @@ describe('FundementalDatabaseModel', () => {
       expect(result).toEqual(['hello']);
       expect(mockExecute.mock.calls.length).toEqual(1);
     });
-    it('should replace all :table_name with table_name value', async () => {
-      mockExecute.mockResolvedValueOnce(['hello']);
-      const result = await Person.execute({ querybase: 'SELECT * FROM :table_name' });
-      expect(result).toEqual(['hello']);
-      expect(mockExecute.mock.calls.length).toEqual(1);
-      expect(mockExecute.mock.calls[0][0]).toEqual('SELECT * FROM test_table');
+    describe('reserved namespace', () => {
+      describe(':table_name', () => {
+        it('should replace all :table_name with table_name value - one occurance', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT * FROM :table_name' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0]).toEqual('SELECT * FROM test_table');
+        });
+        it('should replace all :table_name with table_name value - multiple occurance', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT * FROM :table_name join other_table on other_table.id=:table_name.id' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('SELECT * FROM test_table join other_table on other_table.id=test_table.id');
+        });
+      });
+      describe(':primary_key', () => {
+        it('should replace all :primary_key with primary key name value - one occurance', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT :primary_key FROM test_table' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0]).toEqual('SELECT pk FROM test_table');
+        });
+        it('should replace all :primary_key with primary key name value - multiple occurance', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT :primary_key FROM test_table join other_table on other_table.id=:table_name.:primary_key' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('SELECT pk FROM test_table join other_table on other_table.id=test_table.pk');
+        });
+        it('should not disfigure the :primary_key_value key', async () => { // previously :primary_key_value was disfigured into pk_value
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT :primary_key FROM test_table where :primary_key=:primary_key_value', values: { primary_key_value: '12' } });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('SELECT pk FROM test_table where pk=?');
+        });
+      });
     });
     it('should call end connection', async () => {
       mockExecute.mockResolvedValueOnce(['hello']);
