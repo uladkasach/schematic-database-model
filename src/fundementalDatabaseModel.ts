@@ -92,14 +92,15 @@ abstract class FundementalDatabaseModel {
     findOrCreate object
   */
   protected static FIND_OR_CREATE_QUERY: string; // user must define FIND query, knowing data contract availible
-  public async findOrCreate(): Promise<string> {
+  public async findOrCreate() {
     const values = this.databaseValues;
     if (!values.primary_key_value) values.primary_key_value = uuidv4(); // if not already provided, provide it
     if (!(this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY) throw new Error('FIND_OR_CREATE_QUERY must be defined');
     const querybase = (this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY;
-    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
-    if (!result) throw new Error('unexpected result error');
-    return values.primary_key_value; // return id of this object
+    const [results] = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values }); // from the query, we expect the results of a find
+    if (!results[0]) return null;
+    const instances = results.map((result: any) => new (this.constructor as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    return instances[0];
   }
 
   /**

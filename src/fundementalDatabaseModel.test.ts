@@ -21,13 +21,7 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static FIND_OR_CREATE_QUERY = `
-    INSERT INTO :table_name (:primary_key, name) -- insert
-    SELECT * FROM (SELECT :primary_key_value, :name) -- the following values
-    WHERE NOT EXISTS ( -- if we cant find the following row
-        SELECT * FROM :table_name WHERE name=:name -- i.e., FIND_QUERY
-    ) LIMIT 1;
-    `;
+    protected static FIND_OR_CREATE_QUERY = 'call sp_find_or_create_example(:primary_key_value)';
     protected get databaseValues() {
       return {
         primary_key_value: this.pk,
@@ -157,16 +151,14 @@ describe('FundementalDatabaseModel', () => {
     });
     describe('findOrCreate', () => {
       it('should be able to findOrCreate', async () => {
-        mockExecute.mockResolvedValueOnce(true);
+        mockExecute.mockResolvedValueOnce([[{ pk: '12', name: 'casey' }]]);
         const person = new Person({ name: 'bessy' });
-        const id = await person.findOrCreate();
-        expect(typeof id).toEqual('string');
-        expect(mockExecute.mock.calls[0][0].trim()).toEqual(`INSERT INTO test_table (pk, name) -- insert
-    SELECT * FROM (SELECT ?, ?) -- the following values
-    WHERE NOT EXISTS ( -- if we cant find the following row
-        SELECT * FROM test_table WHERE name=? -- i.e., FIND_QUERY
-    ) LIMIT 1;`);
-        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key should be set, even if we didnt give one
+        const brookes = await person.findOrCreate();
+        expect(brookes.name).toEqual('casey');
+        expect(brookes.constructor).toEqual(Person); // should return a person
+        expect(brookes.pk).toEqual('12'); // should find the pk
+        mockExecute.mockResolvedValueOnce(true);
+        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
       });
     });
     describe('delete', () => {

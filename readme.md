@@ -188,6 +188,32 @@ export default class ImageResolution extends SchematicDatabaseModel {
 # Example Query Definitions
 
 ### Find Or Create
+MySQL restricts IF... ELSE... syntax for inside of stored procedures. Because of this, we must define a stored procedure to use for `findOrCreate`, as otherwise it is not possible to both create and find.
+
+Example of a findOrCreate stored procedure:
+```sql
+DROP PROCEDURE IF EXISTS `sp_find_or_create_canonical_image`;
+DELIMITER //
+CREATE PROCEDURE `sp_find_or_create_canonical_image`
+(IN in_canonical_image_id VARCHAR(36))
+BEGIN
+  IF NOT EXISTS (select * from canonical_images where canonical_image_id = in_canonical_image_id) THEN
+    insert into canonical_images (canonical_image_id) values (in_canonical_image_id);
+  END IF;
+  select * from canonical_images where canonical_image_id=in_canonical_image_id;
+END //
+DELIMITER ;
+```
+
+Example of using that stored procedure to populate the `FIND_OR_CREATE_QUERY`:
+```sql
+  call sp_find_or_create_canonical_image(:primary_key_value);
+```
+
+
+# More Reference Queries
+
+### Insert If Not Exists
 Reference: https://stackoverflow.com/questions/1361340/how-to-insert-if-not-exists-in-mysql
 
 #### When a unique constraint is usable
