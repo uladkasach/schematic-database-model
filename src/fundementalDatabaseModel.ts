@@ -52,7 +52,6 @@ abstract class FundementalDatabaseModel {
   /**
     create new object
     - checks if object id is defined on object already
-    - use semaphore to ensure creation and findOrCreate happen exclusively (e.g., cant create untill findOrCreate is completed)
   */
   protected static CREATE_QUERY: string; // user must define update query, knowing data contract availible
   public async create(): Promise<string> {
@@ -77,7 +76,6 @@ abstract class FundementalDatabaseModel {
 
   /**
     update object
-    - use semaphore to ensure update and findOrCreate happen exlucively (e.g., cant update untill findOrCreate is completed)
   */
   protected static UPDATE_QUERY: string; // user must define update query, knowing data contract availible
   public async update(): Promise<string> {
@@ -85,6 +83,19 @@ abstract class FundementalDatabaseModel {
     if (!(this.constructor as typeof FundementalDatabaseModel).UPDATE_QUERY) throw new Error('UPDATE_QUERY must be defined');
     if (!values.primary_key_value) throw new Error('primary key value must be defined in order to update');
     const querybase = (this.constructor as typeof FundementalDatabaseModel).UPDATE_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    if (!result) throw new Error('unexpected result error');
+    return values.primary_key_value; // return id of this object
+  }
+
+  /**
+    findOrCreate object
+  */
+  protected static FIND_OR_CREATE_QUERY: string; // user must define FIND query, knowing data contract availible
+  public async findOrCreate(): Promise<string> {
+    const values = this.databaseValues;
+    if (!(this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY) throw new Error('FIND_OR_CREATE_QUERY must be defined');
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY;
     const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
     if (!result) throw new Error('unexpected result error');
     return values.primary_key_value; // return id of this object

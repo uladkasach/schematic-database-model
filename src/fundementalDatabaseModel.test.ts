@@ -21,6 +21,7 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'INSERT ...';
+    protected static FIND_OR_CREATE_QUERY = 'SELECT... IF... THEN...';
     protected get databaseValues() {
       return {
         primary_key_value: this.pk,
@@ -101,6 +102,14 @@ describe('FundementalDatabaseModel', () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ pk: '12', name: 'bessy' });
         const id = await person.update();
+        expect(typeof id).toEqual('string');
+      });
+    });
+    describe('findOrCreate', () => {
+      it('should be able to findOrCreate', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ pk: '12', name: 'bessy' });
+        const id = await person.findOrCreate();
         expect(typeof id).toEqual('string');
       });
     });

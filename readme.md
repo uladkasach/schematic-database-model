@@ -176,3 +176,29 @@ export default class ImageResolution extends SchematicDatabaseModel {
   // protected static UPDATE_QUERY = 'UPDATE ...'; UPDATES NOT DEFINED YET
 }
 ```
+
+
+# Example Query Definitions
+
+### Find Or Create
+Reference: https://stackoverflow.com/questions/1361340/how-to-insert-if-not-exists-in-mysql
+
+#### When a unique constraint is usable
+Use `INSERT ... ON DUPLICATE KEY`
+
+#### When no unique constraints are usable:
+```sql
+INSERT INTO canonical_images (canonical_image_id) -- insert
+SELECT * FROM (SELECT '21') AS insert_values_temporary_table -- the following values
+WHERE NOT EXISTS (
+    SELECT * FROM canonical_images WHERE canonical_image_id = '21' -- if we cant find this row
+) LIMIT 1;
+```
+or more generally
+```sql
+INSERT INTO :table_name (YOUR COLUMNS) -- insert
+SELECT * FROM (SELECT YOUR VALUES) -- the following values
+WHERE NOT EXISTS ( -- if we cant find the following row
+    SELECT * FROM :table_name WHERE YOUR_COLUMNS -- i.e., FIND_QUERY
+) LIMIT 1;
+```
