@@ -47,6 +47,19 @@ abstract class FundementalDatabaseModel {
   }
 
   /**
+    findByUniqueAttributes (e.g., read)
+  */
+  protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY: string;
+  public static async findByUniqueAttributes(values: any) {
+    if (!this.FIND_BY_UNIQUE_ATTRIBUTES_QUERY) throw new Error('FIND_BY_UNIQUE_ATTRIBUTES_QUERY must be defined');
+    const querybase = this.FIND_BY_UNIQUE_ATTRIBUTES_QUERY;
+    const [results] = await this.execute({ querybase, values });
+    if (!results[0]) return null;
+    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    return instances[0];
+  }
+
+  /**
     -- Fundemental CRUD ----------------------------------------------------------
   */
   /**
@@ -75,6 +88,33 @@ abstract class FundementalDatabaseModel {
   }
 
   /**
+    create if does not exist
+    - create only if the object does not exist based on the unique keys of the object
+    - expects to sometimes create and sometimes not create the object
+    - TODO: consider generalizing create+createIfDoesNotExist, due to their code being so similar
+  */
+  protected static CREATE_IF_DNE_QUERY: string; // creates a specific uniquely identifiable object if it is not already created
+  public async createIfDoesNotExist() {
+    const values = this.databaseValues;
+
+    // validate request
+    if (!(this.constructor as typeof FundementalDatabaseModel).CREATE_IF_DNE_QUERY) throw new Error('CREATE_IF_DNE_QUERY must be defined');
+    if (values.primary_key_value) throw new Error('primary key value is already defined');
+
+    // add primary key value (uuid)
+    const uuid = uuidv4();
+    values.primary_key_value = uuid;
+
+    // get request
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).CREATE_IF_DNE_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    if (!result) throw new Error('unexpected result error');
+
+    // return the uuid
+    return uuid; // return the uuid
+  }
+
+  /**
     update object
   */
   protected static UPDATE_QUERY: string; // user must define update query, knowing data contract availible
@@ -86,21 +126,6 @@ abstract class FundementalDatabaseModel {
     const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
     if (!result) throw new Error('unexpected result error');
     return values.primary_key_value; // return id of this object
-  }
-
-  /**
-    findOrCreate object
-  */
-  protected static FIND_OR_CREATE_QUERY: string; // user must define FIND query, knowing data contract availible
-  public async findOrCreate() {
-    const values = this.databaseValues;
-    if (!values.primary_key_value) values.primary_key_value = uuidv4(); // if not already provided, provide it
-    if (!(this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY) throw new Error('FIND_OR_CREATE_QUERY must be defined');
-    const querybase = (this.constructor as typeof FundementalDatabaseModel).FIND_OR_CREATE_QUERY;
-    const [results] = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values }); // from the query, we expect the results of a find
-    if (!results[0]) return null;
-    const instances = results.map((result: any) => new (this.constructor as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
-    return instances[0];
   }
 
   /**

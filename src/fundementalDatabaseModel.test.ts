@@ -21,7 +21,8 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static FIND_OR_CREATE_QUERY = 'call sp_find_or_create_example(:primary_key_value)';
+    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
     protected get databaseValues() {
       return {
         primary_key_value: this.pk,
@@ -131,6 +132,15 @@ describe('FundementalDatabaseModel', () => {
         expect(brookes.constructor).toEqual(Person);
       });
     });
+    describe('find by unique attributes', async () => {
+      it('should be able to find and instantiate a class', async () => {
+        mockExecute.mockResolvedValueOnce([[{ name: 'casey', pk: '12' }]]);
+        const brookes = await Person.findByUniqueAttributes({ name: 'casey' });
+        expect(brookes.name).toEqual('casey');
+        expect(brookes.pk).toEqual('12');
+        expect(brookes.constructor).toEqual(Person);
+      });
+    });
   });
   describe('instance crud', () => {
     describe('create', () => {
@@ -141,24 +151,20 @@ describe('FundementalDatabaseModel', () => {
         expect(typeof id).toEqual('string');
       });
     });
+    describe('createIfDoesNotExist', () => {
+      it('should be able to createIfDoesNotExist', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ name: 'bessy' });
+        const id = await person.createIfDoesNotExist();
+        expect(typeof id).toEqual('string');
+      });
+    });
     describe('update', () => {
       it('should be able to update', async () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ pk: '12', name: 'bessy' });
         const id = await person.update();
         expect(typeof id).toEqual('string');
-      });
-    });
-    describe('findOrCreate', () => {
-      it('should be able to findOrCreate', async () => {
-        mockExecute.mockResolvedValueOnce([[{ pk: '12', name: 'casey' }]]);
-        const person = new Person({ name: 'bessy' });
-        const brookes = await person.findOrCreate();
-        expect(brookes.name).toEqual('casey');
-        expect(brookes.constructor).toEqual(Person); // should return a person
-        expect(brookes.pk).toEqual('12'); // should find the pk
-        mockExecute.mockResolvedValueOnce(true);
-        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
       });
     });
     describe('delete', () => {

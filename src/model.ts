@@ -32,12 +32,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     }
 
     // assign model props to self
-    const attributes = (this.constructor as typeof SchematicDatabaseModel).getParsedAttributes();
-    const attributeKeys = Object.keys(attributes);
-    attributeKeys.forEach((key) => {
-      const value = props[key];
-      this[key] = value;
-    });
+    this.databaseValues = props; // set the database values, with parsing
   }
 
   /**
@@ -93,6 +88,24 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   }
 
   /**
+    find or create
+    - uses the createIfDoesNotExist to ensure that the object is created without breaking uniqueness constraints
+    - uses the findByUniqueAttributes to find the object now that we guarenteed it exists
+    @returns {boolean} - was the object created or not; //TODO
+  */
+  public async findOrCreate(): Promise<void> {
+    // 1. ensure that the object is created (while not violating unique constraints)
+    await super.createIfDoesNotExist();
+
+    // 2. find the rest of the details for the object by its unique values
+    const values = this.databaseValues;
+    const instance = await (this.constructor as typeof FundementalDatabaseModel).findByUniqueAttributes(values);
+
+    // 3. update the state of this object based on what was found in the database
+    this.databaseValues = instance;
+  }
+
+  /**
     -- CRUD Implementation -------------------------------------------------------
   */
   public async create(): Promise<string> {
@@ -124,4 +137,12 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     return databaseValues;
   }
 
+  set databaseValues(values: DatabaseValues) {
+    const attributes = (this.constructor as typeof SchematicDatabaseModel).getParsedAttributes();
+    const attributeKeys = Object.keys(attributes);
+    attributeKeys.forEach((key) => {
+      const value = values[key];
+      this[key] = value;
+    });
+  }
 }

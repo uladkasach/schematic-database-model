@@ -31,6 +31,8 @@ describe('SchematicDatabaseModel', () => {
     protected static attributes = personAttributes;
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'UPDATE ...';
+    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
   }
   class Person2 extends SchematicDatabaseModel {
     protected static createDatabaseConnection = (createDatabaseConnectionMock as any as CreateDatabaseConnectionMethod);
@@ -155,6 +157,20 @@ describe('SchematicDatabaseModel', () => {
         expect(typeof person.person_id).toEqual('string');
         await person.save();
         expect(mockExecute.mock.calls[0][0]).toEqual('UPDATE ...');
+      });
+    });
+    describe('findOrCreate', () => {
+      it('should be able to findOrCreate', async () => {
+        mockExecute
+          .mockResolvedValueOnce([true]) // the insertIfDne
+          .mockResolvedValueOnce([[{ person_id: '12', name: 'casey' }]]); // the find
+        const person = new Person({ name: 'bessy' });
+        await person.findOrCreate();
+        expect(person.name).toEqual('casey');
+        expect(person.constructor).toEqual(Person); // should return a person
+        expect(person.person_id).toEqual('12'); // should find the pk
+        mockExecute.mockResolvedValueOnce(true);
+        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
       });
     });
   });
