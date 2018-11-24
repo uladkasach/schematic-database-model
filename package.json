@@ -14,6 +14,7 @@
     "check-types": "tsc --noEmit",
     "tslint": "tslint -c tslint.json -p tsconfig.json",
     "preversion": "npm run test",
+    "postversion": "git push && git push --tags",
     "prepublish": "npm run build"
   },
   "author": "UladKasach",
