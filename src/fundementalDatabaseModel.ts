@@ -25,7 +25,7 @@ abstract class FundementalDatabaseModel {
   /**
     findAll (e.g., read)
   */
-  protected static async findAll({ querybase, values }: { querybase: string, values: any }) {
+  public static async findAll({ querybase, values }: { querybase: string, values: any }) {
     const [results] = await this.execute({ querybase, values });
     const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
     return instances;
