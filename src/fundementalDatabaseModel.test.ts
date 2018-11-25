@@ -1,6 +1,7 @@
 /* tslint:disable max-classes-per-file */
 import FundementalDatabaseModel from './fundementalDatabaseModel';
 import { ValidConnectionType } from './types';
+import ManagedDatabaseConnection from './utils/managedDatabaseConnection';
 
 const mockExecute = jest.fn().mockImplementation(() => []);
 const mockEnd = jest.fn();
@@ -9,8 +10,11 @@ const mockedConnectionObject = ({
   end: mockEnd,
 });
 const createDatabaseConnectionMock = () => mockedConnectionObject;
-const promiseConnection = Promise.resolve(mockedConnectionObject);
+const managedDatabaseConnection = new ManagedDatabaseConnection({ createConnectionOrPool: createDatabaseConnectionMock as any });
 
+beforeAll(async () => {
+  await managedDatabaseConnection.start();
+});
 beforeEach(() => {
   mockExecute.mockClear();
   mockEnd.mockClear();
@@ -43,7 +47,7 @@ describe('FundementalDatabaseModel', () => {
     }
   }
   class PersonWithConnectionDefined extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
-    protected static promiseManagedDatabaseConnection = promiseConnection as any as Promise<ValidConnectionType>;
+    protected static managedDatabaseConnection = managedDatabaseConnection;
     protected static tableName = 'test_table';
     protected static primaryKey = 'pk';
     protected get primaryKeyValue() { return 'pk_val'; }

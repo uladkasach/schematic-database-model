@@ -4,8 +4,8 @@ import promiseToCreateADatabaseConnection from './_test_utils/databaseConnection
 import promiseToCreateADatabasePool from './_test_utils/databasePool';
 import ManagedDatabaseConnection from './utils/managedDatabaseConnection';
 
-const promiseManagedDatabaseConnection = (async () => new ManagedDatabaseConnection({ createConnectionOrPool: promiseToCreateADatabaseConnection }))();
-const promiseManagedDatabasePoolConnection = (async () => new ManagedDatabaseConnection({ createConnectionOrPool: promiseToCreateADatabasePool }))();
+const managedDatabaseConnection = new ManagedDatabaseConnection({ createConnectionOrPool: promiseToCreateADatabaseConnection });
+const managedDatabasePoolConnection = new ManagedDatabaseConnection({ createConnectionOrPool: promiseToCreateADatabasePool });
 
 class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
   protected static createDatabaseConnection = promiseToCreateADatabaseConnection;
@@ -34,7 +34,7 @@ class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused
   }
 }
 class PersonWithConnectionDefined extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
-  protected static promiseManagedDatabaseConnection = promiseManagedDatabaseConnection;
+  protected static managedDatabaseConnection = managedDatabaseConnection;
   protected static tableName = 'person';
   protected static primaryKey = 'pk';
   protected get primaryKeyValue() { return 'pk_val'; }
@@ -56,7 +56,7 @@ class PersonWithConnectionDefined extends FundementalDatabaseModel { // tslint:d
   }
 }
 class PersonWithPoolDefined extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
-  protected static promiseManagedDatabaseConnection = promiseManagedDatabasePoolConnection;
+  protected static managedDatabaseConnection = managedDatabasePoolConnection;
   protected static tableName = 'person';
   protected static primaryKey = 'pk';
   protected get primaryKeyValue() { return 'pk_val'; }
@@ -79,12 +79,12 @@ class PersonWithPoolDefined extends FundementalDatabaseModel { // tslint:disable
 }
 
 beforeAll(async () => {
-  await (await promiseManagedDatabaseConnection).start();
-  await (await promiseManagedDatabasePoolConnection).start();
+  await managedDatabaseConnection.start();
+  await managedDatabasePoolConnection.start();
 });
 afterAll(async () => {
-  await (await promiseManagedDatabaseConnection).end();
-  await (await promiseManagedDatabasePoolConnection).end();
+  await managedDatabaseConnection.end();
+  await managedDatabasePoolConnection.end();
 });
 
 describe('FundementalDatabaseModel', () => {

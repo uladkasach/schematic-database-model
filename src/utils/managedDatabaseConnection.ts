@@ -26,7 +26,7 @@ export default class ManagedDatabaseConnection {
     this.connectionOrPool = null;
   }
 
-  public async execute(sql: string, values: any): Promise<any> {
+  public async execute(sql: string, values?: any): Promise<any> {
     if (this.connectionOrPool === null) throw new ConnectionNotRunningError();
     return this.connectionOrPool.execute(sql, values); // forward the connection command
   }
