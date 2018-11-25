@@ -1,6 +1,6 @@
 {
   "name": "schematic-database-model",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Utilize ORM-like schema validation and abstract away general model queries, while having full control over the SQL",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
