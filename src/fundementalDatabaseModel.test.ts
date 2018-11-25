@@ -1,13 +1,15 @@
 /* tslint:disable max-classes-per-file */
 import FundementalDatabaseModel from './fundementalDatabaseModel';
-import { CreateDatabaseConnectionMethod } from './types.d';
+import { ValidConnectionType } from './types';
 
 const mockExecute = jest.fn().mockImplementation(() => []);
 const mockEnd = jest.fn();
-const createDatabaseConnectionMock = () => ({
+const mockedConnectionObject = ({
   execute: mockExecute,
   end: mockEnd,
 });
+const createDatabaseConnectionMock = () => mockedConnectionObject;
+const promiseConnection = Promise.resolve(mockedConnectionObject);
 
 beforeEach(() => {
   mockExecute.mockClear();
@@ -15,7 +17,7 @@ beforeEach(() => {
 });
 describe('FundementalDatabaseModel', () => {
   class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
-    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as CreateDatabaseConnectionMethod);
+    protected static createDatabaseConnection = createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>;
     protected static tableName = 'test_table';
     protected static primaryKey = 'pk';
     protected get primaryKeyValue() { return 'pk_val'; }
@@ -40,12 +42,61 @@ describe('FundementalDatabaseModel', () => {
       this.name = props.name;
     }
   }
+  class PersonWithConnectionDefined extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
+    protected static promiseManagedDatabaseConnection = promiseConnection as any as Promise<ValidConnectionType>;
+    protected static tableName = 'test_table';
+    protected static primaryKey = 'pk';
+    protected get primaryKeyValue() { return 'pk_val'; }
+    protected get databaseValues() {
+      return {
+        primary_key_value: this.pk,
+        name: this.name,
+      };
+    }
+    public static findAllTest() {
+      return this.findAll({ querybase: 'test', values: { } });
+    }
+    public name: string;
+    public pk: string;
+    constructor(props: any) {
+      super();
+      this.pk = props.pk;
+      this.name = props.name;
+    }
+  }
   describe('execute', () => {
-    it('should be possible to execute an abstract query', async () => {
-      mockExecute.mockResolvedValueOnce(['hello']);
-      const result = await Person.execute({ querybase: 'SELECT * FROM test' });
-      expect(result).toEqual(['hello']);
-      expect(mockExecute.mock.calls.length).toEqual(1);
+    describe('connection methods', () => {
+      describe('createDatabaseConnection connection method', () => {
+        it('should be possible to execute an abstract query', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await Person.execute({ querybase: 'SELECT * FROM test' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+        });
+        it('should call end connection', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          await Person.execute({ querybase: 'SELECT * FROM :table_name' });
+          expect(mockEnd.mock.calls.length).toEqual(1);
+        });
+        it('should call end connection even if error is thrown', async () => {
+          mockExecute.mockRejectedValue(['hello']);
+          try {
+            await Person.execute({ querybase: 'SELECT * FROM :table_name' });
+            throw new Error('should not reach here');
+          } catch (error) {
+            expect(error).toEqual(['hello']);
+          }
+          expect(mockEnd.mock.calls.length).toEqual(1);
+        });
+      });
+      describe('promiseConnectionOrPool', () => {
+        it('should be able to execute on a connection', async () => {
+          mockExecute.mockResolvedValueOnce(['hello']);
+          const result = await PersonWithConnectionDefined.execute({ querybase: 'SELECT * FROM test' });
+          expect(result).toEqual(['hello']);
+          expect(mockExecute.mock.calls.length).toEqual(1);
+        });
+      });
     });
     describe('specifying constants', () => {
       it('should be possible to specify that a parameter is to be treated as a constant', async () => {
@@ -96,21 +147,6 @@ describe('FundementalDatabaseModel', () => {
           expect(mockExecute.mock.calls[0][0].trim()).toEqual('SELECT pk FROM test_table where pk=?');
         });
       });
-    });
-    it('should call end connection', async () => {
-      mockExecute.mockResolvedValueOnce(['hello']);
-      await Person.execute({ querybase: 'SELECT * FROM :table_name' });
-      expect(mockEnd.mock.calls.length).toEqual(1);
-    });
-    it('should call end connection even if error is thrown', async () => {
-      mockExecute.mockRejectedValue(['hello']);
-      try {
-        await Person.execute({ querybase: 'SELECT * FROM :table_name' });
-        throw new Error('should not reach here');
-      } catch (error) {
-        expect(error).toEqual(['hello']);
-      }
-      expect(mockEnd.mock.calls.length).toEqual(1);
     });
   });
   describe('static crud', () => {

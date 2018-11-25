@@ -1,4 +1,6 @@
 export type ValidateMethod = (value?: any) => string[];
+import { Connection, Pool } from 'mysql2/promise'; // NOTE - this module requires usage of mysql2
+import ManagedDatabaseConnection from './utils/managedDatabaseConnection';
 
 export interface Attribute {
   type: string;
@@ -54,4 +56,4 @@ export interface DatabaseValues {
   [index: string]: any;
 }
 
-export type CreateDatabaseConnectionMethod = () => Promise<{ execute: (sql: string, values: any[]) => Promise<any>, end: () => Promise<any> }>;
+type ValidConnectionType = ManagedDatabaseConnection | Connection | Pool;

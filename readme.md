@@ -19,6 +19,11 @@ For example:
 - `SELECT * FROM a_table WHERE a_column=:a_column_value` -> `SELECT * FROM a_table WHERE a_column=?`
 - `SELECT x:a_column_value` -> `SELECT '__some_constant__'`
 
+# Connection Reuse and Pooling
+Note: this module supports usage of managed database connections, where the user is responsible for starting and ending database connections or pools. See the fundementalDatabaseModel.test.integration.ts for a live working example of how to use this.
+
+Note: the utils/managedDatabaseConnection class makes it easy to create very explicit work flows of managing database connections.
+
 # Examples
 
 ## Basic model

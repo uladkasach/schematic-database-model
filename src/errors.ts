@@ -43,3 +43,10 @@ export class CustomAttributeMissingValidationError extends Error {
     super(message);
   }
 }
+
+export class ConnectionDefinitionMethodAmbiguousError extends Error {
+  constructor() {
+    const message = 'createDatabaseConnection and promiseConnectionOrPool are both defined: this state is ambiguous. please choose ONE method of defining the database connection.';
+    super(message);
+  }
+}

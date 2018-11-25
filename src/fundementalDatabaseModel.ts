@@ -1,6 +1,7 @@
 import yesql from 'yesql';
 import uuidv4 from 'uuid/v4';
-import { DatabaseValues, CreateDatabaseConnectionMethod } from './types.d';
+import { DatabaseValues, ValidConnectionType } from './types.d';
+import { ConnectionDefinitionMethodAmbiguousError } from './errors';
 
 const named = yesql.mysql; // to be used as named(querybase)(params)
 
@@ -8,10 +9,17 @@ abstract class FundementalDatabaseModel {
   /**
     -- To Be Defined In Implementatino -----------------------------------------------------------
   */
-  protected static createDatabaseConnection: CreateDatabaseConnectionMethod; // expects to be defined in implementation
+  // schema constants
   protected static tableName: string; // expects to be defined in implementation
   protected static primaryKey: string; // expects to be defined in implementation
-  // protected static createSemaphore: Semaphore; // exectes to be defined in implementation
+
+  // connection logic - define either createDatabaseConnection OR promiseConnection
+  protected static createDatabaseConnection: () => Promise<ValidConnectionType>; // in this case, the user defined a way to create the database connection. the model will handle opening and closing the connection.
+  protected static promiseManagedDatabaseConnection: Promise<ValidConnectionType>; // in this case, the user defined the database connection or pool. the model will use whatever connection or pool is provided. the user will have to close the connection once they are finished.
+
+  /**
+    to be defined
+  */
 
   /**
     -- Data Extraction -----------------------------------------------------------
@@ -168,18 +176,29 @@ abstract class FundementalDatabaseModel {
     // 1. create { query, values } pair
     const query = named(specifiedQueryBase)(values);
 
+    // 2. retreive the database connection or pool && what to run after completing execution
+    let databaseConnectionOrPool: ValidConnectionType; // something that can execute a query
+    let postExecutionCleanupMethod: () => Promise<any>; // what to run after executing the query
+    if (this.createDatabaseConnection && this.promiseManagedDatabaseConnection) throw new ConnectionDefinitionMethodAmbiguousError(); // check that state is not ambiguous
+    if (this.createDatabaseConnection) { // if user has defined the createDatabaseConnection method, we must both create the connection and close it afterwards
+      databaseConnectionOrPool = await this.createDatabaseConnection(); // the user has asked the model to create the connection
+      postExecutionCleanupMethod = async () => databaseConnectionOrPool.end(); // if user asked the model to create the connection, the model must be sure to close it
+    } else {
+      databaseConnectionOrPool = await this.promiseManagedDatabaseConnection; // the user has provided the model with a way to retrieve a connection or a pool
+      postExecutionCleanupMethod = async () => {}; // the user must manage the connection or pool they are providing the model on their own.
+    }
+
     // 2. call databaseConnection.execute with query
-    const databaseConnection = await this.createDatabaseConnection(); // as any, since the createDatabaseConnection will be implemented in class extension
-    let result;
+    let result: any; // can be a number of different result formats depending on the query
     let foundError;
     try {
-      result = await databaseConnection.execute(query.sql, query.values);
+      result = await (databaseConnectionOrPool as any).execute(query.sql, query.values); // as any as for some reason when merging Connection and ManagedDatabaseConnection we get a type error, although they work on their own
     } catch (error) {
       console.log(error);
       console.log(query);
       foundError = error;
     } finally {
-      await databaseConnection.end();
+      await postExecutionCleanupMethod();
     }
 
     // 2.5 if error was found, continue throwing it now that we've closed db connection

@@ -1,7 +1,7 @@
 /* tslint:disable max-classes-per-file */
 
 import SchematicDatabaseModel from './model';
-import { ConvinienceAttributes, StrictAttributes, CreateDatabaseConnectionMethod } from './types.d';
+import { ConvinienceAttributes, StrictAttributes, ValidConnectionType } from './types.d';
 
 const mockExecute = jest.fn().mockImplementation(() => []);
 const mockEnd = jest.fn();
@@ -25,7 +25,7 @@ beforeEach(() => {
 });
 describe('SchematicDatabaseModel', () => {
   class Person extends SchematicDatabaseModel {
-    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as CreateDatabaseConnectionMethod);
+    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>);
     protected static tableName = 'people';
     protected static primaryKey = 'person_id';
     protected static attributes = personAttributes;
@@ -35,7 +35,7 @@ describe('SchematicDatabaseModel', () => {
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
   }
   class Person2 extends SchematicDatabaseModel {
-    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as CreateDatabaseConnectionMethod);
+    protected static createDatabaseConnection = (createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>);
     protected static tableName = 'people';
     protected static primaryKey = 'person_id';
     protected static attributes = personAttributes;

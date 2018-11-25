@@ -8,12 +8,13 @@
     "clean": "rm -rf ./dist",
     "build": "npm run clean && npm run build-ts && npm run copy-explicit-typedefs",
     "copy-explicit-typedefs": "cp src/*.d.ts dist",
-    "test": "jest --forceExit --coverage --verbose",
     "watch-test": "npm run test -- --watchAll",
     "build-ts": "tsc -p ./tsconfig.build.json",
     "check-types": "tsc --noEmit",
     "tslint": "tslint -c tslint.json -p tsconfig.json",
-    "preversion": "npm run test",
+    "test": "jest --forceExit --coverage --verbose",
+    "integration-test": "jest -c jest.integration.config.js --forceExit --coverage --verbose",
+    "preversion": "npm run test && npm run integration-test && npm run build",
     "postversion": "git push && git push --tags",
     "prepublish": "npm run build"
   },
@@ -24,6 +25,7 @@
     "@types/mysql2": "github:types/mysql2",
     "@types/uuid": "^3.4.4",
     "@types/yesql": "^3.2.1",
+    "dotenv": "^6.1.0",
     "husky": "^1.1.3",
     "jest": "^23.6.0",
     "ts-jest": "^23.10.4",
@@ -33,6 +35,8 @@
     "typescript": "^3.1.3"
   },
   "dependencies": {
+    "@types/dotenv": "^6.1.0",
+    "await-semaphore": "^0.1.3",
     "mysql2": "^1.6.1",
     "uuid": "^3.3.2",
     "yesql": "^3.2.2"
