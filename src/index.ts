@@ -3,5 +3,4 @@ import { ConvinienceAttributes, ValidConnectionType } from './types.d';
 import ManagedDatabaseConnection from './utils/managedDatabaseConnection';
 
 export default SchematicDatabaseModel;
-export { ConvinienceAttributes, ValidConnectionType };
-export { ManagedDatabaseConnection };
+export { ConvinienceAttributes, ValidConnectionType, ManagedDatabaseConnection };
