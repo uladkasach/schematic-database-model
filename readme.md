@@ -24,7 +24,16 @@ Note: this module supports usage of managed database connections, where the user
 
 Note: the utils/managedDatabaseConnection class makes it easy to create very explicit work flows of managing database connections.
 
+# Special Types
+
+### UUID
+The uuid type is a superset of the string type. The special feature of the uuid type, however, is that on `create` all `uuid` type fields that have not been defined and are defined as required are automatically generated and filled in for you.
+  - e.g., if your primary key is a uuid type, the model will generate the uuid for you (since pks can not be null)
+
 # Examples
+
+TODO: add mapping table model example
+TODO: move into own directory
 
 ## Basic model
 This model simply implements the schematic database model.

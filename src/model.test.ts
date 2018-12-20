@@ -11,7 +11,7 @@ const createDatabaseConnectionMock = () => ({
 });
 
 const personAttributes: ConvinienceAttributes = {
-  person_id: 'string',
+  person_id: 'uuid',
   name: {
     type: 'string',
     required: true,
@@ -28,6 +28,7 @@ describe('SchematicDatabaseModel', () => {
     protected static createDatabaseConnection = (createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>);
     protected static tableName = 'people';
     protected static primaryKey = 'person_id';
+    protected static primaryKeyType = 'uuid';
     protected static attributes = personAttributes;
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'UPDATE ...';
@@ -38,6 +39,7 @@ describe('SchematicDatabaseModel', () => {
     protected static createDatabaseConnection = (createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>);
     protected static tableName = 'people';
     protected static primaryKey = 'person_id';
+    protected static primaryKeyType = 'uuid';
     protected static attributes = personAttributes;
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'UPDATE ...';
@@ -153,7 +155,7 @@ describe('SchematicDatabaseModel', () => {
       });
       it('should update if id is defined', async () => {
         mockExecute.mockResolvedValueOnce(true);
-        const person = new Person({ person_id: '12', name: 'bessy' });
+        const person = new Person({ person_id: '1a26c280-050f-11e9-8eb2-f2801f1b9fd1', name: 'bessy' });
         expect(typeof person.person_id).toEqual('string');
         await person.save();
         expect(mockExecute.mock.calls[0][0]).toEqual('UPDATE ...');
@@ -163,13 +165,14 @@ describe('SchematicDatabaseModel', () => {
       it('should be able to findOrCreate', async () => {
         mockExecute
           .mockResolvedValueOnce([true]) // the insertIfDne
-          .mockResolvedValueOnce([[{ person_id: '12', name: 'casey' }]]); // the find
+          .mockResolvedValueOnce([[{ person_id: '1a26c280-050f-11e9-8eb2-f2801f1b9fd1', name: 'casey' }]]); // the find
         const person = new Person({ name: 'bessy' });
         await person.findOrCreate();
         expect(person.name).toEqual('casey');
         expect(person.constructor).toEqual(Person); // should return a person
-        expect(person.person_id).toEqual('12'); // should find the pk
+        expect(person.person_id).toEqual('1a26c280-050f-11e9-8eb2-f2801f1b9fd1'); // should find the pk
         mockExecute.mockResolvedValueOnce(true);
+        expect(mockExecute.mock.calls[0][0]).toEqual('INSERT IGNORE... ?...');
         expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
       });
     });

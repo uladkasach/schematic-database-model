@@ -18,7 +18,7 @@ describe('addValidationToAttributes', () => {
         }
       });
 
-      const validtypes = ['string', 'int', 'float', 'boolean'];
+      const validtypes = ['string', 'int', 'float', 'boolean', 'datetime', 'uuid'];
       validtypes.forEach((type) => {
         it(`should not throw errors for attribute with type: ${type}`, () => {
           addValidationToAttributes({ attributes: { test: { type } } });
@@ -55,70 +55,7 @@ describe('addValidationToAttributes', () => {
 
   describe('validation methods', () => {
     describe('wellKnownTypes', () => {
-      it('should validate string type accurately', () => {
-        const { test: { validation } } = addValidationToAttributes({
-          attributes: {
-            test: {
-              type: 'string',
-            },
-          },
-        });
-        expect(validation('test')).toHaveLength(0);
-        expect(validation(12)).not.toHaveLength(0);
-        expect(validation(true)).not.toHaveLength(0);
-      });
-      it('should validate int type accurately', () => {
-        const { test: { validation } } = addValidationToAttributes({
-          attributes: {
-            test: {
-              type: 'int',
-            },
-          },
-        });
-        expect(validation(12)).toHaveLength(0);
-        expect(validation(12.3)).not.toHaveLength(0);
-        expect(validation('test')).not.toHaveLength(0);
-        expect(validation(true)).not.toHaveLength(0);
-      });
-      it('should validate float type accurately', () => {
-        const { test: { validation } } = addValidationToAttributes({
-          attributes: {
-            test: {
-              type: 'float',
-            },
-          },
-        });
-        expect(validation(12)).toHaveLength(0);
-        expect(validation(12.3)).toHaveLength(0);
-        expect(validation('test')).not.toHaveLength(0);
-        expect(validation(true)).not.toHaveLength(0);
-      });
-      it('should validate boolean type accurately', () => {
-        const { test: { validation } } = addValidationToAttributes({
-          attributes: {
-            test: {
-              type: 'boolean',
-            },
-          },
-        });
-        expect(validation(true)).toHaveLength(0);
-        expect(validation(12)).not.toHaveLength(0);
-        expect(validation(12.3)).not.toHaveLength(0);
-        expect(validation('test')).not.toHaveLength(0);
-      });
-      it('should validate datetime type accurately', () => {
-        const { test: { validation } } = addValidationToAttributes({
-          attributes: {
-            test: {
-              type: 'datetime',
-            },
-          },
-        });
-        expect(validation(12345)).toHaveLength(0); // dates may be defined as numbers
-        expect(validation('2018-10-11')).toHaveLength(0);
-        expect(validation(true)).not.toHaveLength(0);
-        expect(validation('test')).not.toHaveLength(0);
-      });
+      // NOTE: wellKnownTypes are tested in their own suite of tests in their own file.
     });
     describe('required', () => {
       it('should validate not required, undefined value, accurately', () => {

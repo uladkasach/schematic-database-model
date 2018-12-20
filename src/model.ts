@@ -10,6 +10,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   // defined by user
   protected static tableName: string;
   protected static primaryKey: string;
+  protected static primaryKeyType: string;
   protected static attributes: ConvinienceAttributes;
 
   // defined by getParsedAttributes
@@ -81,7 +82,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     save
     - creates if primaryKeyValue is set, updates if not
   */
-  public async save(): Promise<string> {
+  public async save(): Promise<string | number> {
     return (this.primaryKeyValue)
       ? await this.update()
       : await this.create();
@@ -95,7 +96,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   */
   public async findOrCreate(): Promise<void> {
     // 1. ensure that the object is created (while not violating unique constraints)
-    await super.createIfDoesNotExist();
+    await super.create('CREATE_IF_DNE_QUERY');
 
     // 2. find the rest of the details for the object by its unique values
     const values = this.databaseValues;
@@ -108,14 +109,14 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   /**
     -- CRUD Implementation -------------------------------------------------------
   */
-  public async create(): Promise<string> {
-    const uuid = await super.create();
-    this[(this.constructor as typeof SchematicDatabaseModel).primaryKey] = uuid; // update the primaryKey to the new uuid
-    return uuid;
+  public async create(): Promise<string | number> {
+    const primaryKeyValue = await super.create('CREATE_QUERY');
+    this[(this.constructor as typeof SchematicDatabaseModel).primaryKey] = primaryKeyValue; // update the primaryKey to the new primaryKeyValue
+    return primaryKeyValue;
   }
 
   /**
-    -- data extraction ----------------------------------------------------------
+    -- data manipulation ----------------------------------------------------------
   */
   get primaryKeyValue(): any {
     const primaryKey = (this.constructor as typeof SchematicDatabaseModel).primaryKey;
