@@ -13,14 +13,11 @@ abstract class FundementalDatabaseModel {
   // schema constants
   protected static tableName: string; // expects to be defined in implementation
   protected static primaryKey: string; // expects to be defined in implementation
+  protected static primaryKeyType: string; // expects to be defined in implementation
 
   // connection logic - define either createDatabaseConnection OR promiseConnection
   protected static createDatabaseConnection: () => Promise<ValidConnectionType>; // in this case, the user defined a way to create the database connection. the model will handle opening and closing the connection.
   protected static managedDatabaseConnection: ManagedDatabaseConnection; // in this case, the user defined the database connection or pool. the model will use whatever connection or pool is provided. the user will have to close the connection once they are finished.
-
-  /**
-    to be defined
-  */
 
   /**
     -- Data Extraction -----------------------------------------------------------
@@ -43,11 +40,11 @@ abstract class FundementalDatabaseModel {
   /**
     findById (e.g., read)
   */
-  protected static FIND_BY_ID_QUERY: string = 'SELECT * FROM :table_name WHERE :primary_key=:id;';
-  public static async findById(id: string | number) {
-    const querybase = this.FIND_BY_ID_QUERY;
+  protected static FIND_BY_PRIMARY_KEY_QUERY: string = 'SELECT * FROM :table_name WHERE :primary_key=:primary_key_value;';
+  public static async findByPrimaryKey(value: string | number) {
+    const querybase = this.FIND_BY_PRIMARY_KEY_QUERY;
     const values = {
-      id,
+      primary_key_value: value,
     };
     const [results] = await this.execute({ querybase, values });
     if (!results[0]) return null;
@@ -71,56 +68,79 @@ abstract class FundementalDatabaseModel {
   /**
     -- Fundemental CRUD ----------------------------------------------------------
   */
+
   /**
-    create new object
-    - checks if object id is defined on object already
+    Create:
+      - abstracts the recurring elements of create and createIfDoesNotExist
+      - considers and handles three types of primary keys:
+        - auto increment
+        - uuid
+        - custom
+
+    Create Types:
+      - regular
+      - create if not defined:
+        - create only if the object does not exist based on the unique keys of the object
+        - expects to sometimes create and sometimes not create the object
+
+    Logic:
+      0. validate the request
+        - ensure query is defined
+      1. validate the primary key
+        - ensure its null at first
+        - if its a uuid, generate the uuid value
+      2. run the query
+      3. return the key
+        - if its a uuid, return the value defined
+        - return the lastInsertedId otherwise
   */
   protected static CREATE_QUERY: string; // user must define update query, knowing data contract availible
-  public async create(): Promise<string> {
+  protected static CREATE_IF_DNE_QUERY: string; // user must define update query, knowing data contract availible
+  public async create(choice: 'CREATE_QUERY' | 'CREATE_IF_DNE_QUERY' = 'CREATE_QUERY'): Promise<string | number> {
     const values = this.databaseValues;
+    const primaryKeyType = (this.constructor as typeof FundementalDatabaseModel).primaryKeyType;
 
-    // validate request
-    if (!(this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY) throw new Error('CREATE_QUERY must be defined');
-    if (values.primary_key_value) throw new Error('primary key value is already defined');
+    // 0. validate the request
+    const requestedQuery = (this.constructor as typeof FundementalDatabaseModel)[choice];
+    if (!requestedQuery) throw new Error(`${choice} must be defined`); // throw error if the query choice was not instantiated
 
-    // add primary key value (uuid)
-    const uuid = uuidv4();
-    values.primary_key_value = uuid;
+    // 1. validate the primary key
+    switch (primaryKeyType) {
+      case 'auto_increment':
+        if (values.primary_key_value) throw new Error('primary key value is already defined'); // throw error if value defined already, should be null
+        break;
+      case 'uuid':
+        if (values.primary_key_value) throw new Error('primary key value is already defined'); // throw error if value defined already, should be null
+        values.primary_key_value = uuidv4(); // assign a new uuid
+        break;
+      case 'custom':
+        if (typeof values.primary_key_value === 'undefined') throw new Error('primary key value must be defined'); // throw error if value not defined already, should be defined by user
+        break;
+      default:
+        throw new Error('invalid primary key type found');
+    }
 
-    // get request
-    const querybase = (this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY;
+    // 2. run the query
+    const querybase = (this.constructor as typeof FundementalDatabaseModel)[choice];
     const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
     if (!result) throw new Error('unexpected result error');
 
-    // return the uuid
-    return uuid; // return the uuid
-  }
-
-  /**
-    create if does not exist
-    - create only if the object does not exist based on the unique keys of the object
-    - expects to sometimes create and sometimes not create the object
-    - TODO: consider generalizing create+createIfDoesNotExist, due to their code being so similar
-  */
-  protected static CREATE_IF_DNE_QUERY: string; // creates a specific uniquely identifiable object if it is not already created
-  public async createIfDoesNotExist() {
-    const values = this.databaseValues;
-
-    // validate request
-    if (!(this.constructor as typeof FundementalDatabaseModel).CREATE_IF_DNE_QUERY) throw new Error('CREATE_IF_DNE_QUERY must be defined');
-    if (values.primary_key_value) throw new Error('primary key value is already defined');
-
-    // add primary key value (uuid)
-    const uuid = uuidv4();
-    values.primary_key_value = uuid;
-
-    // get request
-    const querybase = (this.constructor as typeof FundementalDatabaseModel).CREATE_IF_DNE_QUERY;
-    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
-    if (!result) throw new Error('unexpected result error');
-
-    // return the uuid
-    return uuid; // return the uuid
+    // 3. return the recorded primary key value
+    let primaryKeyValueRecorded;
+    switch (primaryKeyType) {
+      case 'auto_increment':
+        primaryKeyValueRecorded = result[0].insertId;
+        break;
+      case 'uuid':
+        primaryKeyValueRecorded = values.primary_key_value;
+        break;
+      case 'custom':
+        primaryKeyValueRecorded = values.primary_key_value;
+        break;
+      default:
+        throw new Error('invalid primary key type found');
+    }
+    return primaryKeyValueRecorded; // return the uuid
   }
 
   /**

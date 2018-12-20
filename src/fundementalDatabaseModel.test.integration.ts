@@ -9,16 +9,17 @@ const managedDatabasePoolConnection = new ManagedDatabaseConnection({ createConn
 
 class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
   protected static createDatabaseConnection = promiseToCreateADatabaseConnection;
-  protected static tableName = 'test_table';
-  protected static primaryKey = 'pk';
-  protected get primaryKeyValue() { return 'pk_val'; }
-  protected static CREATE_QUERY = 'INSERT ...';
+  protected static tableName = 'person';
+  protected static primaryKey = 'person_uuid';
+  protected static primaryKeyType = 'uuid';
+  protected get primaryKeyValue() { return this.person_uuid; }
+  protected static CREATE_QUERY = 'INSERT INTO :table_name (:primary_key, name) VALUES (:primary_key_value, :name)';
   protected static UPDATE_QUERY = 'INSERT ...';
   protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
   protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
   protected get databaseValues() {
     return {
-      primary_key_value: this.pk,
+      primary_key_value: this.person_uuid,
       name: this.name,
     };
   }
@@ -26,10 +27,37 @@ class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused
     return this.findAll({ querybase: 'test', values: { } });
   }
   public name: string;
-  public pk: string;
+  public person_uuid: string; // tslint:disable-line
   constructor(props: any) {
     super();
-    this.pk = props.pk;
+    this.person_uuid = props.person_uuid;
+    this.name = props.name;
+  }
+}
+class IncrementalPerson extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
+  protected static createDatabaseConnection = promiseToCreateADatabaseConnection;
+  protected static tableName = 'incremental_person';
+  protected static primaryKey = 'person_id';
+  protected static primaryKeyType = 'auto_increment';
+  protected get primaryKeyValue() { return null; }
+  protected static CREATE_QUERY = 'INSERT INTO :table_name (:primary_key, name) VALUES (:primary_key_value, :name)';
+  protected static UPDATE_QUERY = 'INSERT ...';
+  protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+  protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
+  protected get databaseValues() {
+    return {
+      primary_key_value: null,
+      name: this.name,
+    };
+  }
+  public static findAllTest() {
+    return this.findAll({ querybase: 'test', values: { } });
+  }
+  public name: string;
+  public person_uuid: string; // tslint:disable-line
+  constructor(props: any) {
+    super();
+    this.person_uuid = props.person_uuid;
     this.name = props.name;
   }
 }
@@ -37,6 +65,7 @@ class PersonWithConnectionDefined extends FundementalDatabaseModel { // tslint:d
   protected static managedDatabaseConnection = managedDatabaseConnection;
   protected static tableName = 'person';
   protected static primaryKey = 'pk';
+  protected static primaryKeyType = 'auto_increment';
   protected get primaryKeyValue() { return 'pk_val'; }
   protected get databaseValues() {
     return {
@@ -59,6 +88,7 @@ class PersonWithPoolDefined extends FundementalDatabaseModel { // tslint:disable
   protected static managedDatabaseConnection = managedDatabasePoolConnection;
   protected static tableName = 'person';
   protected static primaryKey = 'pk';
+  protected static primaryKeyType = 'auto_increment';
   protected get primaryKeyValue() { return 'pk_val'; }
   protected get databaseValues() {
     return {
@@ -98,17 +128,28 @@ describe('FundementalDatabaseModel', () => {
     it('should be able to execute when given a database connection pool with promiseDatabaseConnectionOrPool', async () => {
       await PersonWithPoolDefined.execute({ querybase: 'show table status' });
     });
-  });
-  it('should not throw an error when we request 2000+ requests at the same time', async () => {
-    // proof of concept - user should define a pool or a single connection. having the tool create connections for each is out of scope of this tool.
-    // really, its debatable whether we should enable the user to offload managing connections onto the tool since its not ideal in the first place.
+    it('should not throw an error when we request 2000+ requests at the same time', async () => {
+      // proof of concept - user should define a pool or a single connection.
 
-    // create 2500 queries
-    const createQuery = async () => PersonWithPoolDefined.execute({ querybase: 'show table status' });
-    const promises = [];
-    while (promises.length < 2500) {
-      promises.push(createQuery());
-    }
-    await Promise.all(promises);
+      // create 2500 queries
+      const createQuery = async () => PersonWithPoolDefined.execute({ querybase: 'show table status' });
+      const promises = [];
+      while (promises.length < 2500) {
+        promises.push(createQuery());
+      }
+      await Promise.all(promises);
+    });
+  });
+  describe('create', () => {
+    it('should be able to create with a uuid value', async () => {
+      const person = new Person({ name: 'bessy' });
+      const id = await person.create();
+      expect(typeof id).toEqual('string');
+    });
+    it('should be able to create with a auto increment value', async () => {
+      const person = new IncrementalPerson({ name: 'bessy' });
+      const id = await person.create();
+      expect(typeof id).toEqual('number'); // expect the auto increment value id to not equal 0
+    });
   });
 });

@@ -24,8 +24,63 @@ describe('FundementalDatabaseModel', () => {
     protected static createDatabaseConnection = createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>;
     protected static tableName = 'test_table';
     protected static primaryKey = 'pk';
+    protected static primaryKeyType = 'uuid';
     protected get primaryKeyValue() { return 'pk_val'; }
-    protected static CREATE_QUERY = 'INSERT ...';
+    protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
+    protected static UPDATE_QUERY = 'INSERT ...';
+    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
+    protected get databaseValues() {
+      return {
+        primary_key_value: this.pk,
+        name: this.name,
+      };
+    }
+    public static findAllTest() {
+      return this.findAll({ querybase: 'test', values: { } });
+    }
+    public name: string;
+    public pk: string;
+    constructor(props: any) {
+      super();
+      this.pk = props.pk;
+      this.name = props.name;
+    }
+  }
+  class IncrementalPerson extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
+    protected static createDatabaseConnection = createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>;
+    protected static tableName = 'test_table';
+    protected static primaryKey = 'pk';
+    protected static primaryKeyType = 'auto_increment';
+    protected get primaryKeyValue() { return 'pk_val'; }
+    protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
+    protected static UPDATE_QUERY = 'INSERT ...';
+    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
+    protected get databaseValues() {
+      return {
+        primary_key_value: this.pk,
+        name: this.name,
+      };
+    }
+    public static findAllTest() {
+      return this.findAll({ querybase: 'test', values: { } });
+    }
+    public name: string;
+    public pk: string;
+    constructor(props: any) {
+      super();
+      this.pk = props.pk;
+      this.name = props.name;
+    }
+  }
+  class CustomPerson extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
+    protected static createDatabaseConnection = createDatabaseConnectionMock as any as () => Promise<ValidConnectionType>;
+    protected static tableName = 'test_table';
+    protected static primaryKey = 'pk';
+    protected static primaryKeyType = 'custom';
+    protected get primaryKeyValue() { return 'pk_val'; }
+    protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
     protected static UPDATE_QUERY = 'INSERT ...';
     protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
@@ -50,6 +105,7 @@ describe('FundementalDatabaseModel', () => {
     protected static managedDatabaseConnection = managedDatabaseConnection;
     protected static tableName = 'test_table';
     protected static primaryKey = 'pk';
+    protected static primaryKeyType = 'uuid';
     protected get primaryKeyValue() { return 'pk_val'; }
     protected get databaseValues() {
       return {
@@ -167,7 +223,7 @@ describe('FundementalDatabaseModel', () => {
     describe('find by id', () => {
       it('should be able to find and instantiate a class', async () => {
         mockExecute.mockResolvedValueOnce([[{ name: 'casey' }]]);
-        const brookes = await Person.findById(12);
+        const brookes = await Person.findByPrimaryKey(12);
         expect(brookes.name).toEqual('casey');
         expect(brookes.constructor).toEqual(Person);
       });
@@ -185,17 +241,111 @@ describe('FundementalDatabaseModel', () => {
   describe('instance crud', () => {
     describe('create', () => {
       it('should be able to create', async () => {
-        mockExecute.mockResolvedValueOnce(true);
+        mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
         const person = new Person({ name: 'bessy' });
         const id = await person.create();
         expect(typeof id).toEqual('string');
+      });
+      describe('choice', () => {
+        it('should default to regular create query', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 821 }]);
+          const person = new IncrementalPerson({ name: 'bessy' });
+          const id = await person.create();
+          expect(typeof id).toEqual('number');
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('INSERT ... ?...');
+        });
+        it('should be able to run create if not defined query', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 921 }]);
+          const person = new IncrementalPerson({ name: 'bessy' });
+          const id = await person.create('CREATE_IF_DNE_QUERY');
+          expect(typeof id).toEqual('number');
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('INSERT IGNORE... ?...');
+        });
+      });
+      describe('type: auto_increment', () => {
+        it('should throw an error if value was defined', async () => {
+          try {
+            mockExecute.mockResolvedValueOnce([{ insertId: 821 }]);
+            const person = new IncrementalPerson({ name: 'bessy', pk: 'test' });
+            await person.create();
+            throw new Error('should not reach here');
+          } catch (error) {
+            expect(error.message).toEqual('primary key value is already defined');
+          }
+        });
+        it('should find that undefined was passed as the primary key value', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 821 }]);
+          const person = new IncrementalPerson({ name: 'bessy' });
+          await person.create();
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][1][0]).toEqual(undefined);
+        });
+        it('should find that the lastInsertedId was returned', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 821 }]);
+          const person = new IncrementalPerson({ name: 'bessy' });
+          const id = await person.create();
+          expect(typeof id).toEqual('number');
+          expect(id).toEqual(821);
+        });
+      });
+      describe('type: uuid', () => {
+        it('should throw an error if value was defined', async () => {
+          try {
+            mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+            const person = new IncrementalPerson({ name: 'bessy', pk: 'test' });
+            await person.create();
+            throw new Error('should not reach here');
+          } catch (error) {
+            expect(error.message).toEqual('primary key value is already defined');
+          }
+        });
+        it('should find that undefined was passed as the primary key value', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+          const person = new Person({ name: 'bessy' });
+          await person.create();
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(typeof mockExecute.mock.calls[0][1][0]).toEqual('string');
+        });
+        it('should find that the lastInsertedId was returned', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+          const person = new Person({ name: 'bessy' });
+          const id = await person.create();
+          expect(typeof id).toEqual('string');
+        });
+      });
+      describe('type: custom', () => {
+        it('should throw an error if value was not defined', async () => {
+          try {
+            mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+            const person = new CustomPerson({ name: 'bessy' });
+            await person.create();
+            throw new Error('should not reach here');
+          } catch (error) {
+            expect(error.message).toEqual('primary key value must be defined');
+          }
+        });
+        it('should find that undefined was passed as the primary key value', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+          const person = new CustomPerson({ name: 'bessy', pk: '1234' });
+          await person.create();
+          expect(mockExecute.mock.calls.length).toEqual(1);
+          expect(mockExecute.mock.calls[0][1][0]).toEqual('1234');
+        });
+        it('should find that the lastInsertedId was returned', async () => {
+          mockExecute.mockResolvedValueOnce([{ insertId: 0 }]);
+          const person = new CustomPerson({ name: 'bessy', pk: '1234' });
+          const id = await person.create();
+          expect(id).toEqual('1234');
+        });
       });
     });
     describe('createIfDoesNotExist', () => {
       it('should be able to createIfDoesNotExist', async () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ name: 'bessy' });
-        const id = await person.createIfDoesNotExist();
+        const id = await person.create('CREATE_IF_DNE_QUERY');
         expect(typeof id).toEqual('string');
       });
     });
