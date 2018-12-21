@@ -22,7 +22,6 @@ abstract class FundementalDatabaseModel {
   /**
     -- Data Extraction -----------------------------------------------------------
   */
-  protected abstract get primaryKeyValue(): any;
   protected abstract get databaseValues(): DatabaseValues;
 
   /**

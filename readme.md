@@ -24,12 +24,6 @@ Note: this module supports usage of managed database connections, where the user
 
 Note: the utils/managedDatabaseConnection class makes it easy to create very explicit work flows of managing database connections.
 
-# Special Types
-
-### UUID
-The uuid type is a superset of the string type. The special feature of the uuid type, however, is that on `create` all `uuid` type fields that have not been defined and are defined as required are automatically generated and filled in for you.
-  - e.g., if your primary key is a uuid type, the model will generate the uuid for you (since pks can not be null)
-
 # Examples
 
 TODO: add mapping table model example
@@ -55,6 +49,7 @@ export default class CanonicalImage extends SchematicDatabaseModel {
   protected static createDatabaseConnection: CreateDatabaseConnectionMethod = promiseConnection;
   protected static tableName = 'canonical_images';
   protected static primaryKey = 'canonical_image_id';
+  protected static primaryKeyType = 'auto_increment'; // other options: 'uuid', 'custom'
   protected static attributes: ConvinienceAttributes = {
     canonical_image_id: 'string',
     created_at: 'datetime',
@@ -162,6 +157,7 @@ export default class ImageResolution extends SchematicDatabaseModel {
   protected static createDatabaseConnection: CreateDatabaseConnectionMethod = promiseConnection;
   protected static tableName = 'image_resolutions';
   protected static primaryKey = 'image_resolution_id';
+  protected static primaryKeyType = 'uuid';
   protected static attributes: ConvinienceAttributes = {
     image_resolution_id: 'string',
     created_at: 'datetime',

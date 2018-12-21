@@ -83,7 +83,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     - creates if primaryKeyValue is set, updates if not
   */
   public async save(): Promise<string | number> {
-    return (this.primaryKeyValue)
+    return (this.databaseValues.primary_key_value)
       ? await this.update()
       : await this.create();
   }
@@ -118,22 +118,16 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   /**
     -- data manipulation ----------------------------------------------------------
   */
-  get primaryKeyValue(): any {
-    const primaryKey = (this.constructor as typeof SchematicDatabaseModel).primaryKey;
-    const primaryKeyValue = (this as SchematicDatabaseModel)[primaryKey]; // we expect
-    return primaryKeyValue;
-  }
-
   get databaseValues(): DatabaseValues {
-    const databaseValues: any = {
-      primary_key_value: this.primaryKeyValue,
-    };
+    const primaryKey = (this.constructor as typeof SchematicDatabaseModel).primaryKey;
+    const databaseValues: any = {};
     const attributes = (this.constructor as typeof SchematicDatabaseModel).getParsedAttributes();
     const attributeKeys = Object.keys(attributes);
     attributeKeys.forEach((key) => {
       const value = this[key];
       const recordedValue = (typeof value === 'undefined') ? null : value; // if undefined, cast to null - since databases only have null
       databaseValues[key] = recordedValue;
+      if (key === primaryKey) databaseValues.primary_key_value = recordedValue;
     });
     return databaseValues;
   }
