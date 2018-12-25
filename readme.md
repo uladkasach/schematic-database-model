@@ -24,6 +24,40 @@ Note: this module supports usage of managed database connections, where the user
 
 Note: the utils/managedDatabaseConnection class makes it easy to create very explicit work flows of managing database connections.
 
+# Methods
+
+## Low Level
+- `.findAll(querybase, values)`
+  - this methods calls whatever query you pass to it and casts all results into the database model object, returning instances of the model.
+
+## High Level
+These are methods that we support at a high level due to common use cases. For these methods, defining the query is sufficient - logic is already in place to handle the rest.
+
+- `.create`
+  - calls the `CREATE_QUERY` statement
+  - works with auto_increment, uuid, and custom primary key types
+- `.update`
+  - calls the `UPDATE_QUERY` statement
+- `.save`
+  - calls `.create` or `.update` based on whether or not primary key value is defined
+- `.findByPrimaryKey`
+  - finds the object by primary_key_value
+- `.delete`
+  - deletes the object by primary_key_value
+- `.findOrCreate`
+  - calls the `CREATE_IF_DNE_QUERY` and subsequently the `FIND_BY_UNIQUE_ATTRIBUTES_QUERY`
+- `.upsert`
+  - calls the `UPSERT_QUERY` and subsequently the `FIND_BY_UNIQUE_ATTRIBUTES_QUERY`
+
+
+#### Upsert -vs- FindOrCreate
+The distinction between findOrCreate and upsert lies in the fact that findOrCreate will never modify data - it simply checks whether or not the uniquely identifiable row of data was created at some point.
+
+Upsert, on the other hand, finds the row of data by its unique static fields and asserts that the dynamic data is updated to requested version
+  - note: in some designs, the "update" is conducted with just one insert of a version record. [example](https://www.dropbox.com/s/8hnkzet6fueblz7/TemporalDBDesign.pdf?dl=0)
+
+NOTE: there is no difference between the actual functionality of upsert and findOrCreate. The model distinguishes the two, however, to make it more clear during implementation what flows of logic your models actually support.
+
 # Examples
 
 TODO: add mapping table model example

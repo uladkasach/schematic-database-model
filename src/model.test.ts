@@ -20,7 +20,7 @@ const personAttributes: ConvinienceAttributes = {
 };
 
 beforeEach(() => {
-  mockExecute.mockClear();
+  mockExecute.mockReset();
   mockEnd.mockClear();
 });
 describe('SchematicDatabaseModel', () => {
@@ -33,6 +33,7 @@ describe('SchematicDatabaseModel', () => {
     protected static CREATE_QUERY = 'INSERT ...';
     protected static UPDATE_QUERY = 'UPDATE ...';
     protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static UPSERT_QUERY = 'INSERT IGNORE... 2 :primary_key_value...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
   }
   class Person2 extends SchematicDatabaseModel {
@@ -171,8 +172,21 @@ describe('SchematicDatabaseModel', () => {
         expect(person.name).toEqual('casey');
         expect(person.constructor).toEqual(Person); // should return a person
         expect(person.person_id).toEqual('1a26c280-050f-11e9-8eb2-f2801f1b9fd1'); // should find the pk
-        mockExecute.mockResolvedValueOnce(true);
         expect(mockExecute.mock.calls[0][0]).toEqual('INSERT IGNORE... ?...');
+        expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
+      });
+    });
+    describe('upsert', () => {
+      it('should be able to upsert', async () => {
+        mockExecute
+          .mockResolvedValueOnce([true]) // the upsert
+          .mockResolvedValueOnce([[{ person_id: '1a26c280-050f-11e9-8eb2-f2801f1b9fd1', name: 'casey' }]]); // the find
+        const person = new Person({ name: 'bessy' });
+        await person.upsert();
+        expect(person.name).toEqual('casey');
+        expect(person.constructor).toEqual(Person); // should return a person
+        expect(person.person_id).toEqual('1a26c280-050f-11e9-8eb2-f2801f1b9fd1'); // should find the pk
+        expect(mockExecute.mock.calls[0][0]).toEqual('INSERT IGNORE... 2 ?...');
         expect(mockExecute.mock.calls[0][1][0]).not.toEqual(undefined); // primary key value we sent in query though should not be undefined, in case we did need to create it
       });
     });

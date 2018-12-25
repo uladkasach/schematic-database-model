@@ -28,6 +28,7 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
     protected static UPDATE_QUERY = 'INSERT ...';
+    protected static UPSERT_QUERY = 'UPSERT ...';
     protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
     protected get databaseValues() {
@@ -346,6 +347,14 @@ describe('FundementalDatabaseModel', () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ name: 'bessy' });
         const id = await person.create('CREATE_IF_DNE_QUERY');
+        expect(typeof id).toEqual('string');
+      });
+    });
+    describe('upsert', () => {
+      it('should be able to upsert', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ name: 'bessy' });
+        const id = await person.create('UPSERT_QUERY');
         expect(typeof id).toEqual('string');
       });
     });

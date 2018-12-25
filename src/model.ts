@@ -90,13 +90,33 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
 
   /**
     find or create
-    - uses the createIfDoesNotExist to ensure that the object is created without breaking uniqueness constraints
+    - uses the createIfDoesNotExist query to ensure that the object is created without breaking uniqueness constraints
     - uses the findByUniqueAttributes to find the object now that we guarenteed it exists
     @returns {boolean} - was the object created or not; //TODO
   */
   public async findOrCreate(): Promise<void> {
     // 1. ensure that the object is created (while not violating unique constraints)
     await super.create('CREATE_IF_DNE_QUERY');
+
+    // 2. find the rest of the details for the object by its unique values
+    const values = this.databaseValues;
+    const instance = await (this.constructor as typeof FundementalDatabaseModel).findByUniqueAttributes(values);
+
+    // 3. update the state of this object based on what was found in the database
+    this.databaseValues = instance;
+  }
+
+  /**
+    upsert
+    - uses the upsert query to ensure that
+      1. the object, identified by its unique static fields, is created
+      2. any dynamic data of the object is updated to the newly passed most recent state
+    - uses the findByUniqueAttributes to find the object details now that we guarenteed it exists and is up to date
+    @returns {boolean} - was the object created or not; //TODO
+  */
+  public async upsert(): Promise<void> {
+    // 1. ensure that the object is created (while not violating unique constraints)
+    await super.create('UPSERT_QUERY');
 
     // 2. find the rest of the details for the object by its unique values
     const values = this.databaseValues;

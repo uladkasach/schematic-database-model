@@ -80,7 +80,9 @@ abstract class FundementalDatabaseModel {
       - regular
       - create if not defined:
         - create only if the object does not exist based on the unique keys of the object
-        - expects to sometimes create and sometimes not create the object
+      - upsert
+        - create an entry with the static data only if it does not exist, based on the unique keys of the object
+        - update the dynamic data of the entry, specified by the unique static data
 
     Logic:
       0. validate the request
@@ -93,9 +95,10 @@ abstract class FundementalDatabaseModel {
         - if its a uuid, return the value defined
         - return the lastInsertedId otherwise
   */
-  protected static CREATE_QUERY: string; // user must define update query, knowing data contract availible
-  protected static CREATE_IF_DNE_QUERY: string; // user must define update query, knowing data contract availible
-  public async create(choice: 'CREATE_QUERY' | 'CREATE_IF_DNE_QUERY' = 'CREATE_QUERY'): Promise<string | number> {
+  protected static CREATE_QUERY: string; // user must define query, knowing data contract availible
+  protected static CREATE_IF_DNE_QUERY: string; // user must define query, knowing data contract availible
+  protected static UPSERT_QUERY: string; // user must define query, knowing data contract availible
+  public async create(choice: 'CREATE_QUERY' | 'CREATE_IF_DNE_QUERY' | 'UPSERT_QUERY' = 'CREATE_QUERY'): Promise<string | number> {
     const values = this.databaseValues;
     const primaryKeyType = (this.constructor as typeof FundementalDatabaseModel).primaryKeyType;
 
