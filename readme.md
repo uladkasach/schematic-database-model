@@ -24,6 +24,42 @@ Note: this module supports usage of managed database connections, where the user
 
 Note: the utils/managedDatabaseConnection class makes it easy to create very explicit work flows of managing database connections.
 
+# Methods
+
+## Low Level
+- `.execute(querybase, values)`
+  - this method simply executes whatever query you pass to it and returns the response
+- `.findAll(querybase, values)`
+  - this methods executes whatever query you pass to it and casts all results into the database model object, returning instances of the model.
+
+## High Level
+These are methods that we support at a high level due to common use cases. For these methods, defining the query is sufficient - logic is already in place to handle the rest.
+
+- `.create`
+  - calls the `CREATE_QUERY` statement
+  - works with auto_increment, uuid, and custom primary key types
+- `.update`
+  - calls the `UPDATE_QUERY` statement
+- `.save`
+  - calls `.create` or `.update` based on whether or not primary key value is defined
+- `.findByPrimaryKey`
+  - finds the object by primary_key_value
+- `.delete`
+  - deletes the object by primary_key_value
+- `.upsert`
+  - calls the `UPSERT_QUERY` and subsequently the `FIND_BY_UNIQUE_ATTRIBUTES_QUERY`
+- `.findOrCreate`
+  - calls `.upsert`
+
+# Recommended Design: Insert Only
+By enforcing an insert only policy on your databases you guarantee that all data is persisted even if the current state of entities is updated. Further, it makes your schema's easier to understand and reduces the surface area for bugs to arise from.
+
+In tables which simply aggregate unique values, this is simple to enforce as you can `INSERT IGNORE...` (with unique constraints) to ensure that each entry is recorded atleast one time.
+
+In tables which track the current state of a mutatable entry, the following approach is recommended:
+- https://www.slideshare.net/TommCarr/bitemporal-rdbms-2014
+- https://www.dropbox.com/s/8hnkzet6fueblz7/TemporalDBDesign.pdf?dl=0
+
 # Examples
 
 TODO: add mapping table model example
