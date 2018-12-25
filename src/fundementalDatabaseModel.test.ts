@@ -28,7 +28,7 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static UPSERT_QUERY = 'UPSERT ...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
     protected get databaseValues() {
       return {
@@ -55,7 +55,7 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
+    protected static UPSERT_QUERY = 'UPSERT ...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
     protected get databaseValues() {
       return {
@@ -82,7 +82,6 @@ describe('FundementalDatabaseModel', () => {
     protected get primaryKeyValue() { return 'pk_val'; }
     protected static CREATE_QUERY = 'INSERT ... :primary_key_value...';
     protected static UPDATE_QUERY = 'INSERT ...';
-    protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
     protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
     protected get databaseValues() {
       return {
@@ -258,10 +257,10 @@ describe('FundementalDatabaseModel', () => {
         it('should be able to run create if not defined query', async () => {
           mockExecute.mockResolvedValueOnce([{ insertId: 921 }]);
           const person = new IncrementalPerson({ name: 'bessy' });
-          const id = await person.create('CREATE_IF_DNE_QUERY');
+          const id = await person.create('UPSERT_QUERY');
           expect(typeof id).toEqual('number');
           expect(mockExecute.mock.calls.length).toEqual(1);
-          expect(mockExecute.mock.calls[0][0].trim()).toEqual('INSERT IGNORE... ?...');
+          expect(mockExecute.mock.calls[0][0].trim()).toEqual('UPSERT ...');
         });
       });
       describe('type: auto_increment', () => {
@@ -341,11 +340,11 @@ describe('FundementalDatabaseModel', () => {
         });
       });
     });
-    describe('createIfDoesNotExist', () => {
-      it('should be able to createIfDoesNotExist', async () => {
+    describe('upsert', () => {
+      it('should be able to upsert', async () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ name: 'bessy' });
-        const id = await person.create('CREATE_IF_DNE_QUERY');
+        const id = await person.create('UPSERT_QUERY');
         expect(typeof id).toEqual('string');
       });
     });
