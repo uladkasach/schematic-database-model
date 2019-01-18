@@ -98,7 +98,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
   */
   public async upsert(): Promise<void> {
     // 1. ensure that the object is created (while not violating unique constraints)
-    await super.create('UPSERT_QUERY');
+    await super.upsert();
 
     // 2. find the rest of the details for the object by its unique values
     const values = this.databaseValues;
@@ -112,7 +112,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     -- CRUD Implementation -------------------------------------------------------
   */
   public async create(): Promise<string | number> {
-    const primaryKeyValue = await super.create('CREATE_QUERY');
+    const primaryKeyValue = await super.create();
     this[(this.constructor as typeof SchematicDatabaseModel).primaryKey] = primaryKeyValue; // update the primaryKey to the new primaryKeyValue
     return primaryKeyValue;
   }

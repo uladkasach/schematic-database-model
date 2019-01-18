@@ -75,14 +75,6 @@ abstract class FundementalDatabaseModel {
         - auto increment
         - uuid
         - custom
-
-    Create Types:
-      - regular
-        - simply attempts to create, without concern for whether it (an object with same unique keys) already existed or not
-      - upsert
-        - create an entry with the static data only if it does not exist, based on the unique keys of the object
-        - update the dynamic data of the entry previously specified-by-static-data
-
     Logic:
       0. validate the request
         - ensure query is defined
@@ -95,14 +87,13 @@ abstract class FundementalDatabaseModel {
         - return the lastInsertedId otherwise
   */
   protected static CREATE_QUERY: string; // user must define query, knowing data contract availible
-  protected static UPSERT_QUERY: string; // user must define query, knowing data contract availible
-  public async create(choice: 'CREATE_QUERY' | 'UPSERT_QUERY' = 'CREATE_QUERY'): Promise<string | number> {
+  public async create(): Promise<string | number> {
     const values = this.databaseValues;
     const primaryKeyType = (this.constructor as typeof FundementalDatabaseModel).primaryKeyType;
 
     // 0. validate the request
-    const requestedQuery = (this.constructor as typeof FundementalDatabaseModel)[choice];
-    if (!requestedQuery) throw new Error(`${choice} must be defined`); // throw error if the query choice was not instantiated
+    const requestedQuery = (this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY;
+    if (!requestedQuery) throw new Error('CREATE_QUERY must be defined'); // throw error if the query choice was not instantiated
 
     // 1. validate the primary key
     switch (primaryKeyType) {
@@ -121,7 +112,7 @@ abstract class FundementalDatabaseModel {
     }
 
     // 2. run the query
-    const querybase = (this.constructor as typeof FundementalDatabaseModel)[choice];
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).CREATE_QUERY;
     const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
     if (!result) throw new Error('unexpected result error');
 
@@ -141,6 +132,28 @@ abstract class FundementalDatabaseModel {
         throw new Error('invalid primary key type found');
     }
     return primaryKeyValueRecorded; // return the uuid
+  }
+
+  /**
+    upsert object
+    - upserts should only be defined based on uniquely identifiable attributes of the data
+    - due to the nature of upserting, we will either create
+        or find it already created each time and thus must get the id in a seperate
+        step each time.
+    @returns {undefined} - nothing is returned since the id must be queried for in a seperate step
+  */
+  protected static UPSERT_QUERY: string; // user must define query, knowing data contract availible
+  public async upsert(): Promise<void> {
+    const values = this.databaseValues;
+
+    // 0. validate the request
+    const requestedQuery = (this.constructor as typeof FundementalDatabaseModel).UPSERT_QUERY;
+    if (!requestedQuery) throw new Error('UPSERT_QUERY must be defined'); // throw error if the query choice was not instantiated
+
+    // 2. run the query
+    const querybase = (this.constructor as typeof FundementalDatabaseModel).UPSERT_QUERY;
+    const result = await (this.constructor as typeof FundementalDatabaseModel).execute({ querybase, values });
+    if (!result) throw new Error('unexpected result error');
   }
 
   /**

@@ -244,24 +244,8 @@ describe('FundementalDatabaseModel', () => {
         const person = new Person({ name: 'bessy' });
         const id = await person.create();
         expect(typeof id).toEqual('string');
-      });
-      describe('choice', () => {
-        it('should default to regular create query', async () => {
-          mockExecute.mockResolvedValueOnce([{ insertId: 821 }]);
-          const person = new IncrementalPerson({ name: 'bessy' });
-          const id = await person.create();
-          expect(typeof id).toEqual('number');
-          expect(mockExecute.mock.calls.length).toEqual(1);
-          expect(mockExecute.mock.calls[0][0].trim()).toEqual('INSERT ... ?...');
-        });
-        it('should be able to run create if not defined query', async () => {
-          mockExecute.mockResolvedValueOnce([{ insertId: 921 }]);
-          const person = new IncrementalPerson({ name: 'bessy' });
-          const id = await person.create('UPSERT_QUERY');
-          expect(typeof id).toEqual('number');
-          expect(mockExecute.mock.calls.length).toEqual(1);
-          expect(mockExecute.mock.calls[0][0].trim()).toEqual('UPSERT ...');
-        });
+        expect(mockExecute.mock.calls.length).toEqual(1);
+        expect(mockExecute.mock.calls[0][0].trim()).toEqual('INSERT ... ?...');
       });
       describe('type: auto_increment', () => {
         it('should throw an error if value was defined', async () => {
@@ -344,8 +328,14 @@ describe('FundementalDatabaseModel', () => {
       it('should be able to upsert', async () => {
         mockExecute.mockResolvedValueOnce(true);
         const person = new Person({ name: 'bessy' });
-        const id = await person.create('UPSERT_QUERY');
-        expect(typeof id).toEqual('string');
+        await person.upsert();
+        expect(mockExecute.mock.calls.length).toEqual(1);
+        expect(mockExecute.mock.calls[0][0].trim()).toEqual('UPSERT ...');
+      });
+      it('should be able to upsert even if we have found an id for the element already', async () => {
+        mockExecute.mockResolvedValueOnce(true);
+        const person = new Person({ name: 'bessy', pk: '12345' });
+        await person.upsert();
       });
     });
     describe('update', () => {

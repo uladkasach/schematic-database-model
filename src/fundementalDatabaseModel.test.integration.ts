@@ -14,6 +14,7 @@ class Person extends FundementalDatabaseModel { // tslint:disable-line no-unused
   protected static primaryKeyType = 'uuid';
   protected get primaryKeyValue() { return this.person_uuid; }
   protected static CREATE_QUERY = 'INSERT INTO :table_name (:primary_key, name) VALUES (:primary_key_value, :name)';
+  protected static UPSERT_QUERY = 'INSERT INTO :table_name (:primary_key, name) VALUES (:primary_key_value, :name)';
   protected static UPDATE_QUERY = 'INSERT ...';
   protected static CREATE_IF_DNE_QUERY = 'INSERT IGNORE... :primary_key_value...';
   protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = 'SELECT * ...';
@@ -107,6 +108,25 @@ class PersonWithPoolDefined extends FundementalDatabaseModel { // tslint:disable
     this.name = props.name;
   }
 }
+class Color extends FundementalDatabaseModel { // tslint:disable-line no-unused -since we just want to check we can extend it
+  protected static createDatabaseConnection = promiseToCreateADatabaseConnection;
+  protected static tableName = 'colors';
+  protected static primaryKey = 'color_id';
+  protected static primaryKeyType = 'auto_increment';
+  protected get primaryKeyValue() { return null; }
+  protected static UPSERT_QUERY = 'INSERT IGNORE INTO :table_name (:primary_key, name) VALUES (:primary_key_value, :name)';
+  protected get databaseValues() {
+    return {
+      primary_key_value: null,
+      name: this.name,
+    };
+  }
+  public name: string;
+  constructor(props: any) {
+    super();
+    this.name = props.name;
+  }
+}
 
 beforeAll(async () => {
   await managedDatabaseConnection.start();
@@ -150,6 +170,25 @@ describe('FundementalDatabaseModel', () => {
       const person = new IncrementalPerson({ name: 'bessy' });
       const id = await person.create();
       expect(typeof id).toEqual('number'); // expect the auto increment value id to not equal 0
+    });
+  });
+  describe('upsert', () => {
+    it('should be able to upsert a unique color', async () => {
+      const name = 'turquoise';
+      const color = new Color({ name });
+      await color.upsert();
+      const [colors] = await Color.execute({ querybase: 'select * from :table_name where name=:name', values: { name } });
+      expect(colors.length).toEqual(1);
+      expect(typeof colors[0].color_id).toEqual('number');
+    });
+    it('should be able to upsert a unique color twise, with an id too', async () => {
+      const name = 'brown';
+      const color = new Color({ name, color_id: 4 });
+      await color.upsert();
+      await color.upsert();
+      const [colors] = await Color.execute({ querybase: 'select * from :table_name where name=:name', values: { name } });
+      expect(colors.length).toEqual(1);
+      expect(typeof colors[0].color_id).toEqual('number');
     });
   });
 });
