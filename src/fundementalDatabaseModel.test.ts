@@ -218,6 +218,14 @@ describe('FundementalDatabaseModel', () => {
         expect(brookeses[1].name).toEqual('fred');
         brookeses.forEach((brookes: Person) => expect(brookes.constructor).toEqual(Person));
       });
+      it('should be able to find and instantiate classes - sproc response', async () => {
+        mockExecute.mockResolvedValueOnce([[[{ name: 'casey' }, { name: 'fred' }]]]);
+        const brookeses = await Person.findAllTest();
+        expect(brookeses.length).toEqual(2);
+        expect(brookeses[0].name).toEqual('casey');
+        expect(brookeses[1].name).toEqual('fred');
+        brookeses.forEach((brookes: Person) => expect(brookes.constructor).toEqual(Person));
+      });
     });
     describe('find by id', () => {
       it('should be able to find and instantiate a class', async () => {
@@ -226,10 +234,23 @@ describe('FundementalDatabaseModel', () => {
         expect(brookes.name).toEqual('casey');
         expect(brookes.constructor).toEqual(Person);
       });
+      it('should be able to find and instantiate a class - sproc response', async () => {
+        mockExecute.mockResolvedValueOnce([[[{ name: 'casey' }]]]);
+        const brookes = await Person.findByPrimaryKey(12);
+        expect(brookes.name).toEqual('casey');
+        expect(brookes.constructor).toEqual(Person);
+      });
     });
     describe('find by unique attributes', async () => {
       it('should be able to find and instantiate a class', async () => {
         mockExecute.mockResolvedValueOnce([[{ name: 'casey', pk: '12' }]]);
+        const brookes = await Person.findByUniqueAttributes({ name: 'casey' });
+        expect(brookes.name).toEqual('casey');
+        expect(brookes.pk).toEqual('12');
+        expect(brookes.constructor).toEqual(Person);
+      });
+      it('should be able to find and instantiate a class - sproc response', async () => {
+        mockExecute.mockResolvedValueOnce([[[{ name: 'casey', pk: '12' }]]]);
         const brookes = await Person.findByUniqueAttributes({ name: 'casey' });
         expect(brookes.name).toEqual('casey');
         expect(brookes.pk).toEqual('12');

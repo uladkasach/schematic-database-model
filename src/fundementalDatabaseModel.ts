@@ -6,6 +6,14 @@ import ManagedDatabaseConnection from './utils/managedDatabaseConnection';
 
 const named = yesql.mysql; // to be used as named(querybase)(params)
 
+// extract array of rows from response
+const extractRowsFromResult = (result: any) => {
+  let rows = result; // sometimes data of interest is the metadata, and is returned as [metadata]
+  if (Array.isArray(rows[0])) [rows] = rows; // data is usually returned as [rows, metadata];
+  if (Array.isArray(rows[0])) [rows] = rows; // but sometimes it is returned as [[rows, ...], metadata] - if calling a sproc
+  return rows;
+};
+
 abstract class FundementalDatabaseModel {
   /**
     -- To Be Defined In Implementatino -----------------------------------------------------------
@@ -31,8 +39,9 @@ abstract class FundementalDatabaseModel {
     findAll (e.g., read)
   */
   public static async findAll({ querybase, values }: { querybase: string, values: any }) {
-    const [results] = await this.execute({ querybase, values });
-    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    const results = await this.execute({ querybase, values });
+    const rows = extractRowsFromResult(results); // support stored procedure responses
+    const instances = rows.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
     return instances;
   }
 
@@ -45,9 +54,10 @@ abstract class FundementalDatabaseModel {
     const values = {
       primary_key_value: value,
     };
-    const [results] = await this.execute({ querybase, values });
-    if (!results[0]) return null;
-    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    const results = await this.execute({ querybase, values });
+    const rows = extractRowsFromResult(results); // support stored procedure responses
+    if (!rows[0]) return null;
+    const instances = rows.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
     return instances[0];
   }
 
@@ -58,9 +68,10 @@ abstract class FundementalDatabaseModel {
   public static async findByUniqueAttributes(values: any) {
     if (!this.FIND_BY_UNIQUE_ATTRIBUTES_QUERY) throw new Error('FIND_BY_UNIQUE_ATTRIBUTES_QUERY must be defined');
     const querybase = this.FIND_BY_UNIQUE_ATTRIBUTES_QUERY;
-    const [results] = await this.execute({ querybase, values });
-    if (!results[0]) return null;
-    const instances = results.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
+    const results = await this.execute({ querybase, values });
+    const rows = extractRowsFromResult(results); // support stored procedure responses
+    if (!rows[0]) return null;
+    const instances = rows.map((result: any) => new (this as any)(result)); // this as any, since the extended class will not be abstract but because this one is typescript throws error
     return instances[0];
   }
 
