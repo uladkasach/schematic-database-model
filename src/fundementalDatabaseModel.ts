@@ -198,8 +198,10 @@ abstract class FundementalDatabaseModel {
   */
   /**
     execute
-    - expects database connection creation method to have been defined as a static property of the class
-    - creates database connection each time; TODO - reuse connections
+    - supports the `:table_name` and `:primary_key` variable column names; replaces them with their real value before running the query
+    - supports specifying 'explicit' parameters with `x:` notation, contrasted to `:` notation; replaces each of these values with its string literal before running the query
+    - supports reusing a managedDatabaseConnection OR creating a new database connection each time
+    - executes the resulting query with the exact values that were passed in
   */
   public static async execute({ querybase, values = {} }: { querybase: string, values?: any }) {
     // 0.1.

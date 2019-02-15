@@ -229,3 +229,95 @@ export default class ImageResolution extends SchematicDatabaseModel {
   // protected static UPDATE_QUERY = 'UPDATE ...'; UPDATES NOT DEFINED YET
 }
 ```
+
+## Sproc Based Model
+
+```js
+import SchematicDatabaseModel, { ConvinienceAttributes } from 'schematic-database-model';
+import managedDatabaseConnection from '../init/database';
+
+export interface NotificationParamsType {
+  notification_id?: number;
+  notification_uuid?: string;
+  user_uuid: string;
+  method: 'APP' | 'SMS' | 'EMAIL';
+  address: string;
+  message: string;
+  wait_until: string;
+  status: 'WAITING' | 'QUEUED' | 'SENT';
+  effective_at?: string;
+}
+
+export default class Notification extends SchematicDatabaseModel {
+  constructor(params: NotificationParamsType) {
+    super(params);
+  }
+
+  // find all ready for queue
+  public static async findAllReadyForQueue(): Promise<Notification> {
+    const querybase = 'CALL return_decorated_notifications_ready_for_queue()';
+    return (await this.findAll({ querybase, values: {} }));
+  }
+
+  // find a participant by uuid
+  protected static FIND_CURRENT_STATE_BY_UUID_QUERY = `
+    CALL return_decorated_notification_by_id(find_notification_id_by_uuid(:notification_uuid));
+  `;
+  public static async findByUuid({ notification_uuid }: { notification_uuid: string }): Promise<Notification> {
+    const querybase = this.FIND_CURRENT_STATE_BY_UUID_QUERY;
+    const values = {
+      notification_uuid,
+    };
+    return (await this.findAll({ querybase, values }))[0];
+  }
+
+  // delete; for testing only
+  public async delete() {
+    if (process.env.NODE_ENV !== 'test') throw new Error('delete should only be used in test env.');
+
+    // delete dynamic data
+    const querybase = `
+      DELETE FROM notifications_versions WHERE notification_id = :notification_id;
+    `;
+    const values = {
+      notification_id: this.notification_id,
+    };
+    await (this.constructor as typeof SchematicDatabaseModel).execute({ querybase, values });
+
+    // delete static data
+    return super.delete();
+  }
+
+  /**
+    -- database interaction essentials ------------------------------------------------------
+  */
+  protected static managedDatabaseConnection = managedDatabaseConnection;
+  protected static tableName = 'notifications';
+  protected static primaryKey = 'notification_id';
+  protected static primaryKeyType = 'auto_increment';
+  protected static attributes: ConvinienceAttributes = {
+    notification_id: 'int',
+    notification_uuid: 'uuid',
+    created_at: 'datetime',
+    updated_at: 'datetime',
+
+    // static
+    user_uuid: 'uuid',
+    method: 'string',
+    address: 'string',
+    message: 'string',
+    wait_until: 'datetime',
+
+    // mutatable
+    status: 'string',
+    effective_at: 'datetime', // we track this, but we dont define this
+  };
+
+  protected static UPSERT_QUERY = `
+    CALL upsert_notification_safe(:user_uuid, :method, :address, :message, :wait_until, :status);
+  `;
+  protected static FIND_BY_UNIQUE_ATTRIBUTES_QUERY = `
+    CALL return_decorated_notification_by_id(find_notification_id_by_unique_attributes(:user_uuid, :method, :address, :message, :wait_until));
+  `;
+}
+```
