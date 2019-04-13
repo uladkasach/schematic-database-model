@@ -103,6 +103,7 @@ export default abstract class SchematicDatabaseModel extends FundementalDatabase
     // 2. find the rest of the details for the object by its unique values
     const values = this.databaseValues;
     const instance = await (this.constructor as typeof FundementalDatabaseModel).findByUniqueAttributes(values);
+    if (!instance) throw new Error('could not findByUniqueAttributes after upserting this entity');
 
     // 3. update the state of this object based on what was found in the database
     this.databaseValues = instance;
